@@ -413,8 +413,8 @@ export function StreamOverlayPage() {
           {/* Printer name and model can each be selected independently. */}
           {printerIdentity && (
             <div className={`flex items-center ${sizes.gap} mb-2`}>
-              <Printer className={`${sizes.icon} text-white/70`} />
-              <span className={`${sizes.text} text-white font-medium`}>{printerIdentity}</span>
+              <Printer className={`${sizes.icon} shrink-0 text-white/70`} />
+              <span className={`${sizes.text} min-w-0 truncate text-white font-medium`}>{printerIdentity}</span>
             </div>
           )}
 

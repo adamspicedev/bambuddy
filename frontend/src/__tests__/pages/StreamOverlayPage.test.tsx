@@ -157,11 +157,11 @@ describe('StreamOverlayPage', () => {
       expect(screen.queryByText(/·/)).not.toBeInTheDocument();
     });
 
-    it('reads the model from the OBS token feed without requesting printer details', async () => {
+    it.each([['H2D', 'Workshop · H2D'], [null, 'Workshop'], ['', 'Workshop']] as const)('reads the model (%s) from the OBS token feed without requesting printer details', async (model, identity) => {
       let printerHit = false;
       server.use(
         http.get('/api/v1/printers/:id/overlay-status', () => HttpResponse.json({
-          ...mockStatusIdle, name: 'Workshop', model: 'H2D', camera_rotation: 0,
+          ...mockStatusIdle, name: 'Workshop', model, camera_rotation: 0,
           gcode_file: null, temperatures: {}, time_format: 'system',
         })),
         http.get('/api/v1/printers/:id', () => {
@@ -170,8 +170,9 @@ describe('StreamOverlayPage', () => {
         }),
       );
       renderOverlayPage(1, '?token=obs-tok&show=printer,model');
-      expect(await screen.findByText('Workshop · H2D')).toBeInTheDocument();
+      expect(await screen.findByText(identity)).toBeInTheDocument();
       expect(printerHit).toBe(false);
+      if (!model) expect(screen.queryByText(/·/)).not.toBeInTheDocument();
     });
   });
 
