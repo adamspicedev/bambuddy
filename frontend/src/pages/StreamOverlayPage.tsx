@@ -1,3 +1,4 @@
+import { mapModelCode } from '../utils/printerModel';
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -217,7 +218,7 @@ export function StreamOverlayPage() {
   );
   const printerIdentity = [
     config.showPrinter ? printer?.name : null,
-    config.showModel ? printer?.model : null,
+    config.showModel ? mapModelCode(printer?.model ?? null) : null,
   ].filter(Boolean).join(' · ');
   const status = kiosk ? overlay : statusData;
   const timeFormat: TimeFormat = (kiosk ? overlay?.time_format : settings?.time_format) || 'system';
