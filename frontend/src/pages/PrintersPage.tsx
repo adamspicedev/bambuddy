@@ -1,7 +1,7 @@
-import { mapModelCode } from '../utils/printerModel';
 import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { compareFwVersions } from '../utils/firmwareVersion';
+import { mapModelCode } from '../utils/printerModel';
 import { formatPrintName } from '../utils/printName';
 import { isBedSlinger } from '../utils/bedSlinger';
 import { computePopoverPosition, type PopoverPosition } from '../utils/popoverPosition';

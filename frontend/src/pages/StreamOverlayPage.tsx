@@ -1,4 +1,3 @@
-import { mapModelCode } from '../utils/printerModel';
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -6,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Layers, Clock, Timer, Printer, Flame, Square, Box } from 'lucide-react';
 import { api, ApiError, withStreamToken } from '../api/client';
 import { formatDuration, formatETA, type TimeFormat } from '../utils/date';
+import { mapModelCode } from '../utils/printerModel';
 
 type TFunction = (key: string, options?: Record<string, unknown>) => string;
 
