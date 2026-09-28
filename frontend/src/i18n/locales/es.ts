@@ -3575,7 +3575,10 @@ export default {
     eta: 'Tiempo estimado',
     printerIdle: 'La impresora está inactiva',
     printerOffline: 'Impresora desconectada',
+    layer: 'Capa',
+    remaining: 'Restante',
     builder: {
+      updatedArtwork: 'Diseño actualizado',
       title: 'Superposición de emisión',
       description: 'Crea la URL de una superposición de emisión: una vista de cámara a pantalla completa con los datos de impresión en directo encima, para OBS, una pantalla de pared o cualquier fuente de navegador. Elige los campos y copia la URL.',
       printer: 'Impresora',

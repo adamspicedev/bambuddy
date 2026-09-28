@@ -46,6 +46,7 @@ export function StreamOverlayBuilder() {
   const [fields, setFields] = useState<string[]>(DEFAULT_FIELDS);
   const [size, setSize] = useState<OverlaySize>('medium');
   const [fps, setFps] = useState(DEFAULT_FPS);
+  const [updatedArtwork, setUpdatedArtwork] = useState(false);
   const [showCamera, setShowCamera] = useState(true);
   const [token, setToken] = useState('');
   const [preview, setPreview] = useState(false);
@@ -79,10 +80,11 @@ export function StreamOverlayBuilder() {
     params.set('show', selected.join(','));
     if (size !== 'medium') params.set('size', size);
     if (fps !== DEFAULT_FPS) params.set('fps', String(fps));
+    if (updatedArtwork) params.set('artwork', 'updated');
     if (!showCamera) params.set('camera', 'false');
     if (token.trim()) params.set('token', token.trim());
     return `${window.location.origin}/overlay/${id}?${params.toString()}`;
-  }, [printerId, fields, size, fps, showCamera, token]);
+  }, [printerId, fields, size, fps, showCamera, token, updatedArtwork]);
 
   const toggleField = (key: string) => {
     setFields((prev) => (prev.includes(key) ? prev.filter((f) => f !== key) : [...prev, key]));
@@ -202,6 +204,11 @@ export function StreamOverlayBuilder() {
           </p>
         </div>
       </div>
+
+      <label className="mt-4 flex items-center gap-2 text-sm text-bambu-gray">
+        <input type="checkbox" checked={updatedArtwork} onChange={(e) => setUpdatedArtwork(e.target.checked)} className="accent-bambu-green" />
+        {t('streamOverlay.builder.updatedArtwork')}
+      </label>
 
       <fieldset className="mt-4">
         <legend className="text-sm font-medium text-white mb-2">

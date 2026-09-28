@@ -68,6 +68,21 @@ describe('StreamOverlayBuilder', () => {
     expect(screen.getByTitle('Overlay preview')).toHaveAttribute('src', originalUrl);
   });
 
+  it('opts into artwork in the URL and preview and restores the original URL', async () => {
+    const user = userEvent.setup();
+    render(<StreamOverlayBuilder />);
+    const artwork = await screen.findByLabelText('Updated artwork');
+    expect(artwork).not.toBeChecked();
+    const original = shownUrl();
+    await user.click(artwork);
+    expect(new URL(shownUrl()).searchParams.get('artwork')).toBe('updated');
+    await user.click(screen.getByRole('button', { name: 'Show preview' }));
+    expect(screen.getByTitle('Overlay preview')).toHaveAttribute('src', shownUrl());
+    await user.click(artwork);
+    expect(shownUrl()).toBe(original);
+    expect(screen.getByTitle('Overlay preview')).toHaveAttribute('src', original);
+  });
+
   it('switches printer', async () => {
     const user = userEvent.setup();
     render(<StreamOverlayBuilder />);

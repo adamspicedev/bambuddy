@@ -3603,7 +3603,10 @@ export default {
     eta: 'ETA',
     printerIdle: 'Printer is idle',
     printerOffline: 'Printer offline',
+    layer: 'Layer',
+    remaining: 'Remaining',
     builder: {
+      updatedArtwork: 'Updated artwork',
       title: 'Streaming Overlay',
       description: 'Build the URL for a streaming overlay — a full-screen camera view with live print data drawn over it, for OBS, a wall display, or any browser source. Pick the fields you want and copy the URL.',
       printer: 'Printer',

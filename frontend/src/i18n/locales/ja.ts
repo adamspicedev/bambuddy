@@ -3573,7 +3573,10 @@ export default {
     eta: '残り時間',
     printerIdle: 'プリンター待機中',
     printerOffline: 'プリンターオフライン',
+    layer: 'レイヤー',
+    remaining: '残り時間',
     builder: {
+      updatedArtwork: '新しいデザイン',
       title: 'ストリームオーバーレイ',
       description: 'ストリームオーバーレイのURLを作成します。全画面のカメラ映像に印刷中の情報を重ねて表示するもので、OBSや壁掛けディスプレイなどのブラウザソースで使えます。表示する項目を選んでURLをコピーしてください。',
       printer: 'プリンター',

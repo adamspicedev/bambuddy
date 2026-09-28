@@ -106,6 +106,61 @@ describe('StreamOverlayPage', () => {
     vi.unstubAllGlobals();
   });
 
+  describe('updated artwork', () => {
+    it.each(['', '?artwork=other'])('retains the original renderer for %s', async (query) => {
+      const { container } = renderOverlayPage(1, query);
+      await screen.findByAltText('Bambuddy');
+      expect(container.querySelector('.updated-overlay')).not.toBeInTheDocument();
+      expect(screen.getByAltText('Camera stream')).toHaveClass('object-contain');
+    });
+    it('uses token data, rotation and both nozzles without inventing missing temperatures', async () => {
+      server.use(http.get('/api/v1/printers/:id/overlay-status', () => HttpResponse.json({
+        ...mockStatusPrinting, name: 'Token printer', model: 'H2D', camera_rotation: 90,
+        time_format: '24h', temperatures: { nozzle: 210, nozzle_target: 220, nozzle_2: 215, bed: 45 },
+      })));
+      renderOverlayPage(1, '?artwork=updated&token=bblt_test&show=model,nozzle,bed,chamber&size=large');
+      expect(await screen.findByText('H2D')).toBeInTheDocument();
+      expect(screen.queryByText('Token printer')).not.toBeInTheDocument();
+      expect(screen.getByText('Nozzle 2')).toBeInTheDocument();
+      expect(screen.queryByText('Chamber')).not.toBeInTheDocument();
+      const camera = screen.getByAltText('Camera stream');
+      expect(camera).toHaveAttribute('src', expect.stringContaining('token=bblt_test'));
+      expect(camera).toHaveStyle({ transform: 'translate(-50%, -50%) rotate(90deg)' });
+      expect(camera.closest('.updated-overlay')).toHaveAttribute('data-size', 'large');
+      expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    });
+
+    it('renders selected fields and accessible progress', async () => {
+      server.use(http.get('/api/v1/printers/:id/status', () => HttpResponse.json(mockStatusPrinting)));
+      renderOverlayPage(1, '?artwork=updated&show=printer,model,filename,status,progress,layers,eta');
+      expect(await screen.findByRole('progressbar')).toHaveAttribute('aria-valuenow', '45');
+      expect(screen.getByText('X1 Carbon')).toBeInTheDocument();
+      expect(screen.getByText('X1C')).toBeInTheDocument();
+      expect(screen.getByText('Benchy')).toBeInTheDocument();
+      expect(screen.getByText('150 / 300')).toBeInTheDocument();
+    });
+    it('hides all unselected information, including idle status', async () => {
+      const { container } = renderOverlayPage(1, '?artwork=updated&show=&camera=false');
+      await screen.findByAltText('Bambuddy');
+      expect(screen.queryByText('Printer is idle')).not.toBeInTheDocument();
+      expect(screen.queryByAltText('Camera stream')).not.toBeInTheDocument();
+      expect(container.querySelector('.updated-overlay__panel')).not.toBeInTheDocument();
+    });
+    it.each(['FINISH', 'FAILED'])('shows %s without contradictory idle text', async (state) => {
+      server.use(http.get('/api/v1/printers/:id/status', () => HttpResponse.json({ ...mockStatusPrinting, state })));
+      renderOverlayPage(1, '?artwork=updated&show=status,progress');
+      expect(await screen.findByText(state === 'FINISH' ? 'Finished' : 'Failed')).toBeInTheDocument();
+      expect(screen.queryByText('Printer is idle')).not.toBeInTheDocument();
+      expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    });
+    it('hides stale progress when disconnected', async () => {
+      server.use(http.get('/api/v1/printers/:id/status', () => HttpResponse.json({ ...mockStatusPrinting, connected: false })));
+      renderOverlayPage(1, '?artwork=updated&show=status,progress,layers,eta');
+      expect(await screen.findByText('Printer offline')).toBeInTheDocument();
+      expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    });
+  });
+
   describe('rendering', () => {
     it('renders overlay page for printer', async () => {
       renderOverlayPage(1);

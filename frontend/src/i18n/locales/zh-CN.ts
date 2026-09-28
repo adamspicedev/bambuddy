@@ -3560,7 +3560,10 @@ export default {
     eta: '预计完成时间',
     printerIdle: '打印机空闲',
     printerOffline: '打印机离线',
+    layer: '层数',
+    remaining: '剩余时间',
     builder: {
+      updatedArtwork: '新版外观',
       title: '直播叠加层',
       description: '生成直播叠加层的网址：全屏摄像头画面上叠加实时打印信息，可用于 OBS、墙面显示屏或任何浏览器源。选择需要的字段并复制网址。',
       printer: '打印机',
