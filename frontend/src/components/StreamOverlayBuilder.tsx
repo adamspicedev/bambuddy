@@ -81,7 +81,7 @@ export function StreamOverlayBuilder() {
     params.set('show', selected.join(','));
     if (size !== 'medium') params.set('size', size);
     if (fps !== DEFAULT_FPS) params.set('fps', String(fps));
-    if (updatedArtwork) params.set('artwork', 'updated');
+    if (updatedArtwork) params.set('artwork', '2');
     if (!showCamera) params.set('camera', 'false');
     if (token.trim()) params.set('token', token.trim());
     return `${window.location.origin}/overlay/${id}?${params.toString()}`;

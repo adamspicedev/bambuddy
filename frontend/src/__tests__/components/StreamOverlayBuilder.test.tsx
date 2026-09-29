@@ -75,7 +75,7 @@ describe('StreamOverlayBuilder', () => {
     expect(artwork).not.toBeChecked();
     const original = shownUrl();
     await user.click(artwork);
-    expect(new URL(shownUrl()).searchParams.get('artwork')).toBe('updated');
+    expect(new URL(shownUrl()).searchParams.get('artwork')).toBe('2');
     await user.click(screen.getByRole('button', { name: 'Show preview' }));
     expect(screen.getByTitle('Overlay preview')).toHaveAttribute('src', shownUrl());
     await user.click(artwork);

@@ -107,7 +107,14 @@ describe('StreamOverlayPage', () => {
   });
 
   describe('updated artwork', () => {
-    it.each(['', '?artwork=other'])('retains the original renderer for %s', async (query) => {
+    it('maps legacy model codes in version 2', async () => {
+      server.use(http.get('/api/v1/printers/:id', () => HttpResponse.json({ ...mockPrinter, model: 'BL-P001' })));
+      renderOverlayPage(1, '?artwork=2&show=model');
+      expect(await screen.findByText('X1C')).toBeInTheDocument();
+      expect(screen.queryByText('BL-P001')).not.toBeInTheDocument();
+    });
+
+    it.each(['', '?artwork=other', '?artwork=updated'])('retains the original renderer for %s', async (query) => {
       const { container } = renderOverlayPage(1, query);
       await screen.findByAltText('Bambuddy');
       expect(container.querySelector('.updated-overlay')).not.toBeInTheDocument();
@@ -115,10 +122,10 @@ describe('StreamOverlayPage', () => {
     });
     it('uses token data, rotation and both nozzles without inventing missing temperatures', async () => {
       server.use(http.get('/api/v1/printers/:id/overlay-status', () => HttpResponse.json({
-        ...mockStatusPrinting, name: 'Token printer', model: 'H2D', camera_rotation: 90,
+        ...mockStatusPrinting, name: 'Token printer', model: 'O1D', camera_rotation: 90,
         time_format: '24h', temperatures: { nozzle: 210, nozzle_target: 220, nozzle_2: 215, bed: 45 },
       })));
-      renderOverlayPage(1, '?artwork=updated&token=bblt_test&show=model,nozzle,bed,chamber&size=large');
+      renderOverlayPage(1, '?artwork=2&token=bblt_test&show=model,nozzle,bed,chamber&size=large');
       expect(await screen.findByText('H2D')).toBeInTheDocument();
       expect(screen.queryByText('Token printer')).not.toBeInTheDocument();
       expect(screen.getByText('Nozzle 2')).toBeInTheDocument();
@@ -132,7 +139,7 @@ describe('StreamOverlayPage', () => {
 
     it('renders selected fields and accessible progress', async () => {
       server.use(http.get('/api/v1/printers/:id/status', () => HttpResponse.json(mockStatusPrinting)));
-      renderOverlayPage(1, '?artwork=updated&show=printer,model,filename,status,progress,layers,eta');
+      renderOverlayPage(1, '?artwork=2&show=printer,model,filename,status,progress,layers,eta');
       expect(await screen.findByRole('progressbar')).toHaveAttribute('aria-valuenow', '45');
       expect(screen.getByText('X1 Carbon')).toBeInTheDocument();
       expect(screen.getByText('X1C')).toBeInTheDocument();
@@ -140,7 +147,7 @@ describe('StreamOverlayPage', () => {
       expect(screen.getByText('150 / 300')).toBeInTheDocument();
     });
     it('hides all unselected information, including idle status', async () => {
-      const { container } = renderOverlayPage(1, '?artwork=updated&show=&camera=false');
+      const { container } = renderOverlayPage(1, '?artwork=2&show=&camera=false');
       await screen.findByAltText('Bambuddy');
       expect(screen.queryByText('Printer is idle')).not.toBeInTheDocument();
       expect(screen.queryByAltText('Camera stream')).not.toBeInTheDocument();
@@ -148,14 +155,14 @@ describe('StreamOverlayPage', () => {
     });
     it.each(['FINISH', 'FAILED'])('shows %s without contradictory idle text', async (state) => {
       server.use(http.get('/api/v1/printers/:id/status', () => HttpResponse.json({ ...mockStatusPrinting, state })));
-      renderOverlayPage(1, '?artwork=updated&show=status,progress');
+      renderOverlayPage(1, '?artwork=2&show=status,progress');
       expect(await screen.findByText(state === 'FINISH' ? 'Finished' : 'Failed')).toBeInTheDocument();
       expect(screen.queryByText('Printer is idle')).not.toBeInTheDocument();
       expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
     });
     it('hides stale progress when disconnected', async () => {
       server.use(http.get('/api/v1/printers/:id/status', () => HttpResponse.json({ ...mockStatusPrinting, connected: false })));
-      renderOverlayPage(1, '?artwork=updated&show=status,progress,layers,eta');
+      renderOverlayPage(1, '?artwork=2&show=status,progress,layers,eta');
       expect(await screen.findByText('Printer offline')).toBeInTheDocument();
       expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
     });

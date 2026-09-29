@@ -80,6 +80,9 @@
 }
 /* Swap the unrotated box for quarter turns so cover still fills the camera slot. */
 .updated-overlay__camera img[data-sideways='true'] {
+  /* Older OBS browser engines ignore container units and use the viewport crop. */
+  width: 100vh;
+  height: 100vw;
   width: 100cqh;
   height: 100cqw;
 }

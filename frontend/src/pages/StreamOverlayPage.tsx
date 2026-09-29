@@ -56,7 +56,7 @@ function parseConfig(params: URLSearchParams): OverlayConfig {
   return {
     size: (params.get('size') as OverlaySize) || 'medium',
     fps,
-    updatedArtwork: params.get('artwork') === 'updated',
+    updatedArtwork: params.get('artwork') === '2',
     showCamera,
     showProgress: show.includes('progress'),
     showLayers: show.includes('layers'),
@@ -391,7 +391,7 @@ export function StreamOverlayPage() {
       size={config.size}
       camera={config.showCamera ? { url: streamUrl, rotation: printer?.camera_rotation ?? 0, onError: handleStreamError } : null}
       name={config.showPrinter ? printer?.name ?? null : null}
-      model={config.showModel ? printer?.model ?? null : null}
+      model={config.showModel ? mapModelCode(printer?.model ?? null) || null : null}
       filename={config.showFilename && status.current_print ? formatPrintName(status.current_print.replace(/\.gcode\.3mf$|\.3mf$|\.gcode$/i, ''), status.gcode_file, t) : null}
       status={config.showStatus ? (status.connected ? getStatusText(status, t) : t('streamOverlay.printerOffline')) : null}
       state={status.connected ? status.state : null}
