@@ -3599,7 +3599,9 @@ export default {
     layer: 'レイヤー',
     remaining: '残り時間',
     builder: {
-      updatedArtwork: '新しいデザイン',
+      artwork: 'デザイン',
+      artworkClassic: 'クラシック',
+      artworkV2: 'バージョン 2',
       title: 'ストリームオーバーレイ',
       description: 'ストリームオーバーレイのURLを作成します。全画面のカメラ映像に印刷中の情報を重ねて表示するもので、OBSや壁掛けディスプレイなどのブラウザソースで使えます。表示する項目を選んでURLをコピーしてください。',
       printer: 'プリンター',

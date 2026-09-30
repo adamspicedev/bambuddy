@@ -71,14 +71,15 @@ describe('StreamOverlayBuilder', () => {
   it('opts into artwork in the URL and preview and restores the original URL', async () => {
     const user = userEvent.setup();
     render(<StreamOverlayBuilder />);
-    const artwork = await screen.findByLabelText('Updated artwork');
-    expect(artwork).not.toBeChecked();
+    const artwork = await screen.findByLabelText('Artwork');
+    expect(artwork).toHaveValue('1');
     const original = shownUrl();
-    await user.click(artwork);
+    expect(new URL(original).searchParams.has('artwork')).toBe(false);
+    await user.selectOptions(artwork, 'Version 2');
     expect(new URL(shownUrl()).searchParams.get('artwork')).toBe('2');
     await user.click(screen.getByRole('button', { name: 'Show preview' }));
     expect(screen.getByTitle('Overlay preview')).toHaveAttribute('src', shownUrl());
-    await user.click(artwork);
+    await user.selectOptions(artwork, 'Classic');
     expect(shownUrl()).toBe(original);
     expect(screen.getByTitle('Overlay preview')).toHaveAttribute('src', original);
   });

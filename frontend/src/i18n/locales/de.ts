@@ -3599,7 +3599,9 @@ export default {
     layer: 'Schicht',
     remaining: 'Verbleibend',
     builder: {
-      updatedArtwork: 'Aktualisiertes Design',
+      artwork: 'Gestaltung',
+      artworkClassic: 'Klassisch',
+      artworkV2: 'Version 2',
       title: 'Stream-Overlay',
       description: 'Erstellt die URL für ein Stream-Overlay — eine bildschirmfüllende Kameraansicht mit eingeblendeten Live-Druckdaten, für OBS, ein Wanddisplay oder jede andere Browserquelle. Felder auswählen und URL kopieren.',
       printer: 'Drucker',

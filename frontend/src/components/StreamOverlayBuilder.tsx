@@ -47,7 +47,9 @@ export function StreamOverlayBuilder() {
   const [fields, setFields] = useState<string[]>(DEFAULT_FIELDS);
   const [size, setSize] = useState<OverlaySize>('medium');
   const [fps, setFps] = useState(DEFAULT_FPS);
-  const [updatedArtwork, setUpdatedArtwork] = useState(false);
+  // '1' is the original overlay; the renderer is picked by version, not by a
+  // name like "updated" that stops being true once there's a newer one.
+  const [artwork, setArtwork] = useState<'1' | '2'>('1');
   const [showCamera, setShowCamera] = useState(true);
   const [token, setToken] = useState('');
   const [preview, setPreview] = useState(false);
@@ -81,11 +83,11 @@ export function StreamOverlayBuilder() {
     params.set('show', selected.join(','));
     if (size !== 'medium') params.set('size', size);
     if (fps !== DEFAULT_FPS) params.set('fps', String(fps));
-    if (updatedArtwork) params.set('artwork', '2');
+    if (artwork !== '1') params.set('artwork', artwork);
     if (!showCamera) params.set('camera', 'false');
     if (token.trim()) params.set('token', token.trim());
     return `${window.location.origin}/overlay/${id}?${params.toString()}`;
-  }, [printerId, fields, size, fps, showCamera, token, updatedArtwork]);
+  }, [printerId, fields, size, fps, showCamera, token, artwork]);
 
   const toggleField = (key: string) => {
     setFields((prev) => (prev.includes(key) ? prev.filter((f) => f !== key) : [...prev, key]));
@@ -165,6 +167,21 @@ export function StreamOverlayBuilder() {
         </div>
 
         <div>
+          <label htmlFor="overlay-builder-artwork" className="block text-sm font-medium text-white mb-1">
+            {t('streamOverlay.builder.artwork', 'Artwork')}
+          </label>
+          <select
+            id="overlay-builder-artwork"
+            value={artwork}
+            onChange={(e) => setArtwork(e.target.value as '1' | '2')}
+            className="w-full px-3 py-2 bg-bambu-dark rounded-md text-white border border-bambu-dark-tertiary focus:border-bambu-green focus:outline-none"
+          >
+            <option value="1">{t('streamOverlay.builder.artworkClassic', 'Classic')}</option>
+            <option value="2">{t('streamOverlay.builder.artworkV2', 'Version 2')}</option>
+          </select>
+        </div>
+
+        <div>
           <label htmlFor="overlay-builder-fps" className="block text-sm font-medium text-white mb-1">
             {t('streamOverlay.builder.fps', 'Frame rate')}
           </label>
@@ -205,11 +222,6 @@ export function StreamOverlayBuilder() {
           </p>
         </div>
       </div>
-
-      <label className="mt-4 flex items-center gap-2 text-sm text-bambu-gray">
-        <input type="checkbox" checked={updatedArtwork} onChange={(e) => setUpdatedArtwork(e.target.checked)} className="accent-bambu-green" />
-        {t('streamOverlay.builder.updatedArtwork')}
-      </label>
 
       <fieldset className="mt-4">
         <legend className="text-sm font-medium text-white mb-2">

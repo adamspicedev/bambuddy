@@ -3601,7 +3601,9 @@ export default {
     layer: 'Capa',
     remaining: 'Restante',
     builder: {
-      updatedArtwork: 'Diseño actualizado',
+      artwork: 'Diseño',
+      artworkClassic: 'Clásico',
+      artworkV2: 'Versión 2',
       title: 'Superposición de emisión',
       description: 'Crea la URL de una superposición de emisión: una vista de cámara a pantalla completa con los datos de impresión en directo encima, para OBS, una pantalla de pared o cualquier fuente de navegador. Elige los campos y copia la URL.',
       printer: 'Impresora',

@@ -3629,7 +3629,9 @@ export default {
     layer: 'Laag',
     remaining: 'Resterend',
     builder: {
-      updatedArtwork: 'Vernieuwde vormgeving',
+      artwork: 'Vormgeving',
+      artworkClassic: 'Klassiek',
+      artworkV2: 'Versie 2',
       title: 'Streamingoverlay',
       description: 'Bouw de URL voor een streamingoverlay — een camerabeeld op volledig scherm met live afdrukgegevens eroverheen, voor OBS, een wanddisplay of elke browserbron. Kies de velden die je wilt en kopieer de URL.',
       printer: 'Printer',

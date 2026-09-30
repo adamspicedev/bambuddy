@@ -137,6 +137,33 @@ describe('StreamOverlayPage', () => {
       expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
     });
 
+    it.each([
+      [90, { width: '640px', height: '360px' }],
+      [0, null],
+    ])('sizes a camera turned %i degrees from its slot, not the viewport', async (rotation, expected) => {
+      // A portrait source: the camera fills a 360 x 640 middle row, so the
+      // viewport (the old vw/vh fallback) would be the wrong box to swap.
+      const rect = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+        return this.classList.contains('updated-overlay__camera')
+          ? ({ width: 360, height: 640, top: 0, left: 0, right: 360, bottom: 640, x: 0, y: 0, toJSON: () => ({}) } as DOMRect)
+          : ({ width: 0, height: 0, top: 0, left: 0, right: 0, bottom: 0, x: 0, y: 0, toJSON: () => ({}) } as DOMRect);
+      });
+      try {
+        server.use(http.get('/api/v1/printers/:id', () => HttpResponse.json({ ...mockPrinter, camera_rotation: rotation })));
+        renderOverlayPage(1, '?artwork=2');
+        const camera = await screen.findByAltText('Camera stream');
+        await waitFor(() => expect(camera).toHaveStyle({ transform: `translate(-50%, -50%) rotate(${rotation}deg)` }));
+        if (expected) {
+          await waitFor(() => expect(camera).toHaveStyle(expected));
+        } else {
+          expect(camera.style.width).toBe('');
+          expect(camera.style.height).toBe('');
+        }
+      } finally {
+        rect.mockRestore();
+      }
+    });
+
     it('renders selected fields and accessible progress', async () => {
       server.use(http.get('/api/v1/printers/:id/status', () => HttpResponse.json(mockStatusPrinting)));
       renderOverlayPage(1, '?artwork=2&show=printer,model,filename,status,progress,layers,eta');

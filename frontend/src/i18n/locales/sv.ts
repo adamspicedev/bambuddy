@@ -3628,7 +3628,9 @@ errors: {
     layer: 'Lager',
     remaining: 'Återstående',
     builder: {
-      updatedArtwork: 'Uppdaterad design',
+      artwork: 'Utseende',
+      artworkClassic: 'Klassisk',
+      artworkV2: 'Version 2',
       title: 'Strömningsöverlägg',
       description: 'Bygg URL:en för ett strömningsöverlägg — en helskärmskameravy med live utskriftsdata som visas ovanpå. Välj de fält du vill ha och kopiera URL:en.',
       printer: 'Skrivare',

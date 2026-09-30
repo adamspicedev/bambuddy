@@ -67,7 +67,6 @@
   inset: 0;
   z-index: -1;
   overflow: hidden;
-  container-type: size;
 }
 .updated-overlay__camera img {
   position: absolute;
@@ -77,14 +76,6 @@
   height: 100%;
   max-width: none;
   object-fit: cover;
-}
-/* Swap the unrotated box for quarter turns so cover still fills the camera slot. */
-.updated-overlay__camera img[data-sideways='true'] {
-  /* Older OBS browser engines ignore container units and use the viewport crop. */
-  width: 100vh;
-  height: 100vw;
-  width: 100cqh;
-  height: 100cqw;
 }
 .updated-overlay__panel {
   padding: var(--overlay-space);
