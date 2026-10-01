@@ -20,6 +20,7 @@ from sqlalchemy import delete, or_, select, text
 
 from backend.app.api.routes import (
     ams_history,
+    announcements,
     api_keys,
     archive_purge,
     archives,
@@ -1507,6 +1508,52 @@ def _take_new_hms_faults(printer_id: int, errors: list) -> list:
     return _hms_errors_to_notify(errors, new)
 
 
+# `stg_cur` values that mean the printer is not in a preparation stage: 0 is
+# "Printing", -1 and 255 are "no stage" (#3211).
+_NO_PREPARATION_STAGES = frozenset({0, -1, 255})
+
+
+def _progress_milestone_to_notify(printer_id: int, state: PrinterState) -> int | None:
+    """The milestone (25, 50 or 75) this status update reaches for the first time, if any.
+
+    Records it as notified. Called only for a printing state with progress above 0.
+
+    Progress before the first layer is not progress through the print (#3211).
+    An A1 mini reports ``mc_percent`` 85 in the first frame of a print, while
+    still preheating the bed at layer 0, then 3, 7, 40 and 44 through its
+    calibration, and starts layer 1 at 45. Read as progress, that 85 sent the
+    75% notification together with Print Started, and since 75 was then on
+    record, 25 and 50 could never fire. So nothing counts while the printer
+    reports a layer count but has not started layer 1.
+
+    Without a layer count -- a print whose first frame carried no
+    ``total_layer_num``, until the pushall that asks for it is answered
+    (#2702) -- the preparation stage says the same thing: before layer 1 the
+    A1 mini reported ``stg_cur`` 2, 4, 14 and 1 (bed preheating, calibration,
+    homing), and 0 from layer 1 on. -1 and 255 are "no stage". A printer that
+    reports neither keeps the old behaviour rather than never notifying.
+    """
+    if (state.layer_num or 0) < 1:
+        if (state.total_layers or 0) > 0:
+            return None
+        if state.stg_cur not in _NO_PREPARATION_STAGES:
+            return None
+
+    progress = state.progress or 0
+    current_milestone = 0
+    if progress >= 75:
+        current_milestone = 75
+    elif progress >= 50:
+        current_milestone = 50
+    elif progress >= 25:
+        current_milestone = 25
+
+    if current_milestone > _last_progress_milestone.get(printer_id, 0):
+        _last_progress_milestone[printer_id] = current_milestone
+        return current_milestone
+    return None
+
+
 async def on_printer_status_change(printer_id: int, state: PrinterState):
     """Handle printer status changes - broadcast via WebSocket."""
     # Connected-edge reconciliation (#1542 follow-up). When the printer
@@ -1817,20 +1864,8 @@ async def on_printer_status_change(printer_id: int, state: PrinterState):
     is_printing = state.state in ("RUNNING", "PRINTING")
 
     if is_printing and progress > 0:
-        # Determine which milestone we've reached
-        current_milestone = 0
-        if progress >= 75:
-            current_milestone = 75
-        elif progress >= 50:
-            current_milestone = 50
-        elif progress >= 25:
-            current_milestone = 25
-
-        last_milestone = _last_progress_milestone.get(printer_id, 0)
-
-        # If we've crossed a new milestone, send notification
-        if current_milestone > last_milestone:
-            _last_progress_milestone[printer_id] = current_milestone
+        current_milestone = _progress_milestone_to_notify(printer_id, state)
+        if current_milestone is not None:
             try:
                 from backend.app.models.printer import Printer
 
@@ -3136,6 +3171,65 @@ async def on_ams_change(printer_id: int, ams_data: list):
         logging.getLogger(__name__).error("Spoolman AMS sync failed for printer %s: %s", printer_id, e)
 
 
+# Largest finish photo attached to a notification; a bigger one is still linked.
+_FINISH_PHOTO_ATTACH_MAX_BYTES = 2_500_000
+
+
+async def _finish_photo_for_notification(
+    db, archive, archive_id: int, filename: str
+) -> tuple[str | None, bytes | None]:
+    """The ``{finish_photo_url}`` link and the bytes to attach, for a print's finish photo.
+
+    With authentication off the link is the archive's own photo route, as it
+    always was: it opens without a login and doesn't expire. With
+    authentication on that route needs a media token, which nothing tapping a
+    link in Telegram, CallMeBot or a Home Assistant notification has, so the
+    link only ever answered 401. The photo is then saved as a notification
+    photo as well (utils/notification_photos.py) and the link points there: an
+    unguessable name that opens this one photo and nothing else, for 3 days.
+
+    The link is relative when no External URL is set. Bytes over
+    ``_FINISH_PHOTO_ATTACH_MAX_BYTES`` are linked but not attached. Returns
+    ``(None, None)`` when the photo can't be found.
+    """
+    from backend.app.api.routes.settings import get_setting
+    from backend.app.core.auth import is_auth_enabled
+    from backend.app.utils.archive_paths import find_archive_photo
+    from backend.app.utils.notification_photos import save_notification_photo
+
+    log = logging.getLogger(__name__)
+    base = ((await get_setting(db, "external_url")) or "").strip().rstrip("/")
+    url: str | None = f"{base}/api/v1/archives/{archive_id}/photos/{filename}"
+
+    photo_bytes: bytes | None = None
+    try:
+        photo_path = find_archive_photo(archive, filename)
+        if photo_path is not None:
+            photo_bytes = await asyncio.to_thread(photo_path.read_bytes)
+    except Exception as e:
+        log.warning("[NOTIFY-BG] Failed to read finish photo bytes: %s", e)
+
+    try:
+        auth_on = await is_auth_enabled(db)
+    except Exception:
+        auth_on = True  # Unknown: the archive link may need a login, so don't rely on it.
+    if auth_on:
+        url = None
+        if photo_bytes:
+            try:
+                name = await asyncio.to_thread(save_notification_photo, photo_bytes, "print_complete")
+                url = f"{base}/api/v1/notifications/photos/{name}"
+            except Exception as e:
+                log.warning("[NOTIFY-BG] Failed to save finish photo for its link: %s", e)
+
+    if photo_bytes is not None and len(photo_bytes) > _FINISH_PHOTO_ATTACH_MAX_BYTES:
+        log.warning("[NOTIFY-BG] Finish photo too large for attachment: %s bytes", len(photo_bytes))
+        return url, None
+    if photo_bytes:
+        log.info("[NOTIFY-BG] Loaded finish photo bytes: %s bytes", len(photo_bytes))
+    return url, photo_bytes
+
+
 async def _capture_snapshot_for_notification(printer_id: int, printer, logger) -> bytes | None:
     """Capture a camera snapshot for notification image attachment.
 
@@ -3888,6 +3982,12 @@ async def on_print_start(printer_id: int, data: dict):
 
     # Clear any stale user-stopped flag from previous print cycles
     _user_stopped_printers.discard(printer_id)
+    # A new print starts its milestones from zero (#3211). The status path only
+    # resets on progress below 5 while not printing, which a printer that goes
+    # from FINISH at 100% straight into a new print at a preparation-phase 85%
+    # never shows. This callback does not fire after a Bambuddy restart (#1304)
+    # or on resume from pause, so it cannot repeat a milestone mid-print.
+    _last_progress_milestone[printer_id] = 0
     _kill_switch_notification_tasks.pop(printer_id, None)
 
     # #1721: drop any leftover pre-captured finish frame from a prior print
@@ -8207,37 +8307,13 @@ async def on_print_complete(printer_id: int, data: dict):
                             archive_data["usage_results"] = usage_results
                         # Add finish photo URL and image bytes if available
                         if finish_photo_filename:
-                            from backend.app.api.routes.settings import get_setting
-
-                            external_url = await get_setting(db, "external_url")
-                            if external_url:
-                                external_url = external_url.rstrip("/")
-                                archive_data["finish_photo_url"] = (
-                                    f"{external_url}/api/v1/archives/{archive_id}/photos/{finish_photo_filename}"
-                                )
-                            else:
-                                # Fallback to relative URL (won't work for external services)
-                                archive_data["finish_photo_url"] = (
-                                    f"/api/v1/archives/{archive_id}/photos/{finish_photo_filename}"
-                                )
-
-                            # Read finish photo bytes for image attachment (e.g. Pushover)
-                            try:
-                                from backend.app.utils.archive_paths import find_archive_photo
-
-                                photo_path = find_archive_photo(archive, finish_photo_filename)
-                                if photo_path is not None:
-                                    photo_bytes = await asyncio.to_thread(photo_path.read_bytes)
-                                    if len(photo_bytes) <= 2_500_000:
-                                        archive_data["image_data"] = photo_bytes
-                                        logger.info("[NOTIFY-BG] Loaded finish photo bytes: %s bytes", len(photo_bytes))
-                                    else:
-                                        logger.warning(
-                                            f"[NOTIFY-BG] Finish photo too large for attachment: "
-                                            f"{len(photo_bytes)} bytes"
-                                        )
-                            except Exception as e:
-                                logger.warning("[NOTIFY-BG] Failed to read finish photo bytes: %s", e)
+                            photo_url, photo_bytes = await _finish_photo_for_notification(
+                                db, archive, archive_id, finish_photo_filename
+                            )
+                            if photo_url:
+                                archive_data["finish_photo_url"] = photo_url
+                            if photo_bytes:
+                                archive_data["image_data"] = photo_bytes
 
                 if not await _kill_switch_notification_already_sent(kill_switch_notification_task):
                     await notification_service.on_print_complete(
@@ -9944,6 +10020,11 @@ async def lifespan(app: FastAPI):
     # L-2: Start periodic auth cleanup (stale TOTP + expired revoked JTIs)
     start_auth_cleanup()
 
+    # Maintainer announcements: a signed feed fetched from GitHub every few hours.
+    from backend.app.services import announcements as announcements_service
+
+    announcements_service.start()
+
     from backend.app.services.printer_media import start_printer_download_cleanup
 
     start_printer_download_cleanup()
@@ -9998,6 +10079,9 @@ async def lifespan(app: FastAPI):
         logging.warning("Failed to shut down camera broadcasters: %s", e)
     stop_expected_prints_cleanup()
     stop_auth_cleanup()
+    from backend.app.services import announcements as announcements_service
+
+    announcements_service.stop()
     from backend.app.services.printer_media import stop_printer_download_cleanup
 
     await stop_printer_download_cleanup()
@@ -10554,6 +10638,7 @@ app.include_router(spoolman.router, prefix=app_settings.api_prefix)
 app.include_router(spoolman_inventory.router, prefix=app_settings.api_prefix)
 app.include_router(updates.router, prefix=app_settings.api_prefix)
 app.include_router(sponsor_prompt.router, prefix=app_settings.api_prefix)
+app.include_router(announcements.router, prefix=app_settings.api_prefix)
 app.include_router(maintenance.router, prefix=app_settings.api_prefix)
 app.include_router(camera.router, prefix=app_settings.api_prefix)
 app.include_router(camwall.router, prefix=app_settings.api_prefix)
