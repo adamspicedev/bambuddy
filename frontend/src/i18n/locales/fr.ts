@@ -3598,6 +3598,9 @@ export default {
     layer: 'Couche',
     remaining: 'Temps restant',
     builder: {
+      backgroundTransparency: "Transparence du fond",
+      backgroundTransparencyHint: "Estompe uniquement les fonds sombres. Le texte, les logos et la caméra restent visibles.",
+
       artwork: 'Habillage',
       artworkClassic: 'Classique',
       artworkV2: 'Version 2',

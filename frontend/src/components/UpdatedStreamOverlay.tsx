@@ -1,10 +1,11 @@
-import { useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Clock, Layers, Printer, Timer } from 'lucide-react';
 import './UpdatedStreamOverlay.css';
 import { overlayProgressTextStyle } from '../utils/overlayBranding';
 
 interface UpdatedStreamOverlayProps {
+  backgroundTransparency?: number;
   customLogo?: ReactNode;
   progressBackground?: string;
   size: 'small' | 'medium' | 'large';
@@ -53,6 +54,24 @@ function useCameraBox(ref: RefObject<HTMLDivElement | null>, active: boolean) {
 
 export function UpdatedStreamOverlay(props: UpdatedStreamOverlayProps) {
   const { t } = useTranslation();
+  const backgroundAlpha = 1 - (props.backgroundTransparency ?? 0) / 100;
+  const backgroundStyle: CSSProperties & {
+    '--overlay-background-alpha': number;
+    '--overlay-identity-alpha': number;
+    '--overlay-panel-alpha': number;
+  } = {
+    '--overlay-background-alpha': backgroundAlpha,
+    '--overlay-identity-alpha': backgroundAlpha * 0.9,
+    '--overlay-panel-alpha': backgroundAlpha * 0.88,
+  };
+  useLayoutEffect(() => {
+    if (backgroundAlpha === 1) return;
+    // The app's body background would otherwise fill every transparent pixel
+    // in OBS. Restore it when leaving the overlay or resetting transparency.
+    const previous = document.body.style.backgroundColor;
+    document.body.style.backgroundColor = 'transparent';
+    return () => { document.body.style.backgroundColor = previous; };
+  }, [backgroundAlpha]);
   const { camera, name, model, filename, status, state, progress, layers, remaining, eta, temperatures } =
     props;
   const progressTextStyle = overlayProgressTextStyle(props.progressBackground);
@@ -69,7 +88,7 @@ export function UpdatedStreamOverlay(props: UpdatedStreamOverlayProps) {
   ].filter((stat) => stat.value != null);
 
   return (
-    <div className="updated-overlay" data-size={props.size} data-state={state}>
+    <div className="updated-overlay" data-size={props.size} data-state={state} style={backgroundStyle}>
       <header className="updated-overlay__header">
         {(name || model) && (
           <div className="updated-overlay__identity">

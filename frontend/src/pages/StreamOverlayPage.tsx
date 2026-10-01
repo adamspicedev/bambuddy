@@ -17,6 +17,7 @@ type OverlaySize = 'small' | 'medium' | 'large';
 interface OverlayConfig {
   size: OverlaySize;
   updatedArtwork: boolean;
+  backgroundTransparency: number;
   fps: number;
   showCamera: boolean;
   showProgress: boolean;
@@ -55,7 +56,13 @@ function parseConfig(params: URLSearchParams): OverlayConfig {
   const cameraParam = params.get('camera');
   const showCamera = cameraParam !== 'false' && cameraParam !== '0';
 
+  const transparencyParam = Number(params.get('backgroundTransparency'));
+  const backgroundTransparency = Number.isFinite(transparencyParam)
+    ? Math.min(100, Math.max(0, transparencyParam))
+    : 0;
+
   return {
+    backgroundTransparency,
     size: (params.get('size') as OverlaySize) || 'medium',
     fps,
     updatedArtwork: params.get('artwork') === '2',
@@ -400,6 +407,7 @@ export function StreamOverlayPage() {
     const remainingTime = status.remaining_time;
     const hasRemaining = active && config.showEta && remainingTime != null && remainingTime > 0;
     return <UpdatedStreamOverlay
+      backgroundTransparency={config.backgroundTransparency}
       customLogo={customLogo}
       progressBackground={progressBackground}
       size={config.size}

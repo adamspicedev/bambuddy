@@ -3597,6 +3597,9 @@ export default {
     layer: 'Strato',
     remaining: 'Tempo rimanente',
     builder: {
+      backgroundTransparency: "Trasparenza dello sfondo",
+      backgroundTransparencyHint: "Sfuma solo gli sfondi scuri. Testo, loghi e videocamera restano visibili.",
+
       artwork: 'Grafica',
       artworkClassic: 'Classica',
       artworkV2: 'Versione 2',

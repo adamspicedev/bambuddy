@@ -3425,6 +3425,9 @@ export default {
     layer: 'Слой',
     remaining: 'Осталось',
     builder: {
+      backgroundTransparency: "Прозрачность фона",
+      backgroundTransparencyHint: "Изменяет только тёмный фон. Текст, логотипы и изображение камеры остаются видимыми.",
+
       artwork: 'Оформление',
       artworkClassic: 'Классическое',
       artworkV2: 'Версия 2',

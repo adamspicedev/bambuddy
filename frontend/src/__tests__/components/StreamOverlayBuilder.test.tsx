@@ -84,6 +84,26 @@ describe('StreamOverlayBuilder', () => {
     expect(screen.getByTitle('Overlay preview')).toHaveAttribute('src', original);
   });
 
+  it('only offers background transparency for Version 2 and preserves its selection', async () => {
+    const user = userEvent.setup();
+    render(<StreamOverlayBuilder />);
+    const artwork = await screen.findByLabelText('Artwork');
+    expect(screen.queryByRole('slider', { name: /Background transparency/ })).not.toBeInTheDocument();
+    await user.selectOptions(artwork, 'Version 2');
+    const slider = screen.getByRole('slider', { name: /Background transparency/ });
+    expect(slider).toHaveValue('0');
+    expect(shownUrl()).not.toContain('backgroundTransparency');
+    fireEvent.change(slider, { target: { value: '65' } });
+    expect(new URL(shownUrl()).searchParams.get('backgroundTransparency')).toBe('65');
+    await user.click(screen.getByRole('button', { name: 'Show preview' }));
+    expect(screen.getByTitle('Overlay preview')).toHaveAttribute('src', shownUrl());
+    await user.selectOptions(artwork, 'Classic');
+    expect(screen.queryByRole('slider', { name: /Background transparency/ })).not.toBeInTheDocument();
+    expect(shownUrl()).not.toContain('backgroundTransparency');
+    await user.selectOptions(artwork, 'Version 2');
+    expect(screen.getByRole('slider', { name: /Background transparency/ })).toHaveValue('65');
+  });
+
   it('switches printer', async () => {
     const user = userEvent.setup();
     render(<StreamOverlayBuilder />);

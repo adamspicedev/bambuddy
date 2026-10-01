@@ -3639,6 +3639,9 @@ errors: {
     layer: 'Lager',
     remaining: 'Återstående',
     builder: {
+      backgroundTransparency: "Bakgrundens genomskinlighet",
+      backgroundTransparencyHint: "Tona bara ned de mörka bakgrunderna. Text, logotyper och kamerabild förblir synliga.",
+
       artwork: 'Utseende',
       artworkClassic: 'Klassisk',
       artworkV2: 'Version 2',

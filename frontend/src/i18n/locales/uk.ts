@@ -3637,6 +3637,9 @@ export default {
     layer: 'Шар',
     remaining: 'Залишилось',
     builder: {
+      backgroundTransparency: "Прозорість тла",
+      backgroundTransparencyHint: "Змінює лише темне тло. Текст, логотипи та зображення камери залишаються видимими.",
+
       artwork: 'Оформлення',
       artworkClassic: 'Класичне',
       artworkV2: 'Версія 2',

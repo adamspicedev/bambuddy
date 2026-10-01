@@ -3433,6 +3433,9 @@ export default {
     layer: '레이어',
     remaining: '남은 시간',
     builder: {
+      backgroundTransparency: "배경 투명도",
+      backgroundTransparencyHint: "어두운 배경만 흐리게 합니다. 텍스트, 로고와 카메라 영상은 그대로 표시됩니다.",
+
       artwork: '디자인',
       artworkClassic: '클래식',
       artworkV2: '버전 2',

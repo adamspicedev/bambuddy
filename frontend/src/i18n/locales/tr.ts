@@ -3612,6 +3612,9 @@ export default {
     layer: 'Katman',
     remaining: 'Kalan süre',
     builder: {
+      backgroundTransparency: "Arka plan saydamlığı",
+      backgroundTransparencyHint: "Yalnızca koyu arka planları soldurur. Metin, logolar ve kamera görünür kalır.",
+
       artwork: 'Tasarım',
       artworkClassic: 'Klasik',
       artworkV2: 'Sürüm 2',

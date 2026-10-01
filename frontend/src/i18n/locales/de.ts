@@ -3610,6 +3610,9 @@ export default {
     layer: 'Schicht',
     remaining: 'Verbleibend',
     builder: {
+      backgroundTransparency: "Hintergrundtransparenz",
+      backgroundTransparencyHint: "Nur die dunklen Hintergründe ausblenden. Text, Logos und Kamera bleiben sichtbar.",
+
       artwork: 'Gestaltung',
       artworkClassic: 'Klassisch',
       artworkV2: 'Version 2',

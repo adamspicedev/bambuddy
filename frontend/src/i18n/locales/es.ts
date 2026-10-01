@@ -3612,6 +3612,9 @@ export default {
     layer: 'Capa',
     remaining: 'Restante',
     builder: {
+      backgroundTransparency: "Transparencia del fondo",
+      backgroundTransparencyHint: "Atenúa solo los fondos oscuros. El texto, los logotipos y la cámara siguen visibles.",
+
       artwork: 'Diseño',
       artworkClassic: 'Clásico',
       artworkV2: 'Versión 2',

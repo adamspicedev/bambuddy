@@ -3640,6 +3640,9 @@ export default {
     layer: 'Layer',
     remaining: 'Remaining',
     builder: {
+      backgroundTransparency: "Background transparency",
+      backgroundTransparencyHint: "Fade the dark backgrounds only. Text, logos and camera stay visible.",
+
       artwork: 'Artwork',
       artworkClassic: 'Classic',
       artworkV2: 'Version 2',

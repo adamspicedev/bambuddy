@@ -128,6 +128,24 @@ describe('StreamOverlayPage', () => {
     expect(container.querySelector('[style*="linear-gradient"]')).toBeNull();
   });
 
+  it.each([
+    ['0', '1'], ['50', '0.5'], ['100', '0'], ['-10', '1'], ['150', '0'], ['invalid', '1'], ['', '1'],
+  ])('validates Version 2 background transparency %s', async (value, alpha) => {
+    const { container, unmount } = renderOverlayPage(1, `?artwork=2&camera=false&backgroundTransparency=${value}`);
+    await screen.findByAltText('Bambuddy');
+    expect(container.querySelector('.updated-overlay')).toHaveStyle({ '--overlay-background-alpha': alpha });
+    if (alpha !== '1') expect(document.body.style.backgroundColor).toBe('transparent');
+    unmount();
+    expect(document.body.style.backgroundColor).not.toBe('transparent');
+  });
+
+  it('ignores background transparency in Classic', async () => {
+    const { container } = renderOverlayPage(1, '?backgroundTransparency=100');
+    await screen.findByAltText('Bambuddy');
+    expect(container.querySelector('[style*="--overlay-background-alpha"]')).toBeNull();
+    expect(document.body.style.backgroundColor).not.toBe('transparent');
+  });
+
   describe('updated artwork', () => {
     it('maps legacy model codes in version 2', async () => {
       server.use(http.get('/api/v1/printers/:id', () => HttpResponse.json({ ...mockPrinter, model: 'BL-P001' })));

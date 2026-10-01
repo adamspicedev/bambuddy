@@ -3597,6 +3597,9 @@ export default {
     layer: '層數',
     remaining: '剩餘時間',
     builder: {
+      backgroundTransparency: "背景透明度",
+      backgroundTransparencyHint: "僅淡化深色背景。文字、標誌和攝影機畫面保持可見。",
+
       artwork: '外觀',
       artworkClassic: '經典',
       artworkV2: '第 2 版',

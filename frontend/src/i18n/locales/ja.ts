@@ -3610,6 +3610,9 @@ export default {
     layer: 'レイヤー',
     remaining: '残り時間',
     builder: {
+      backgroundTransparency: "背景の透明度",
+      backgroundTransparencyHint: "暗い背景のみを薄くします。テキスト、ロゴ、カメラ映像はそのまま表示されます。",
+
       artwork: 'デザイン',
       artworkClassic: 'クラシック',
       artworkV2: 'バージョン 2',

@@ -52,6 +52,7 @@ export function StreamOverlayBuilder() {
   // '1' is the original overlay; the renderer is picked by version, not by a
   // name like "updated" that stops being true once there's a newer one.
   const [artwork, setArtwork] = useState<'1' | '2'>('1');
+  const [backgroundTransparency, setBackgroundTransparency] = useState(0);
   const [showCamera, setShowCamera] = useState(true);
   const [token, setToken] = useState('');
   const [branding, setBranding] = useState(DEFAULT_BRANDING);
@@ -87,6 +88,9 @@ export function StreamOverlayBuilder() {
     if (size !== 'medium') params.set('size', size);
     if (fps !== DEFAULT_FPS) params.set('fps', String(fps));
     if (artwork !== '1') params.set('artwork', artwork);
+    if (artwork === '2' && backgroundTransparency > 0) {
+      params.set('backgroundTransparency', String(backgroundTransparency));
+    }
     if (!showCamera) params.set('camera', 'false');
     if (branding.logo) params.set('logo', '1');
     if (branding.from && branding.to) {
@@ -95,7 +99,7 @@ export function StreamOverlayBuilder() {
     }
     if (token.trim()) params.set('token', token.trim());
     return `${window.location.origin}/overlay/${id}?${params.toString()}`;
-  }, [printerId, fields, size, fps, showCamera, token, artwork, branding]);
+  }, [printerId, fields, size, fps, showCamera, token, artwork, branding, backgroundTransparency]);
 
   const toggleField = (key: string) => {
     setFields((prev) => (prev.includes(key) ? prev.filter((f) => f !== key) : [...prev, key]));
@@ -190,6 +194,27 @@ export function StreamOverlayBuilder() {
             <option value="2">{t('streamOverlay.builder.artworkV2', 'Version 2')}</option>
           </select>
         </div>
+
+        {artwork === '2' && (
+          <div>
+            <label htmlFor="overlay-builder-background-transparency" className="flex justify-between gap-2 text-sm font-medium text-white mb-1">
+              <span>{t('streamOverlay.builder.backgroundTransparency')}</span>
+              <span aria-hidden="true">{backgroundTransparency}%</span>
+            </label>
+            <input
+              id="overlay-builder-background-transparency"
+              type="range"
+              min={0}
+              max={100}
+              step={1}
+              value={backgroundTransparency}
+              aria-valuetext={`${backgroundTransparency}%`}
+              onChange={(event) => setBackgroundTransparency(Number(event.target.value))}
+              className="w-full accent-bambu-green"
+            />
+            <p className="text-xs text-bambu-gray mt-1">{t('streamOverlay.builder.backgroundTransparencyHint')}</p>
+          </div>
+        )}
 
         <div>
           <label htmlFor="overlay-builder-fps" className="block text-sm font-medium text-white mb-1">

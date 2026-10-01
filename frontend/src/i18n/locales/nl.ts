@@ -3640,6 +3640,9 @@ export default {
     layer: 'Laag',
     remaining: 'Resterend',
     builder: {
+      backgroundTransparency: "Achtergrondtransparantie",
+      backgroundTransparencyHint: "Vervaag alleen de donkere achtergronden. Tekst, logo’s en camera blijven zichtbaar.",
+
       artwork: 'Vormgeving',
       artworkClassic: 'Klassiek',
       artworkV2: 'Versie 2',

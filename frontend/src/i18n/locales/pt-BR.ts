@@ -3597,6 +3597,9 @@ export default {
     layer: 'Camada',
     remaining: 'Tempo restante',
     builder: {
+      backgroundTransparency: "Transparência do fundo",
+      backgroundTransparencyHint: "Atenua apenas os fundos escuros. Texto, logotipos e câmera continuam visíveis.",
+
       artwork: 'Visual',
       artworkClassic: 'Clássico',
       artworkV2: 'Versão 2',
