@@ -172,6 +172,30 @@ describe('StreamOverlayPage', () => {
     }
   });
 
+  describe('explicit layouts', () => {
+    it.each(['FINISH', 'FAILED', 'IDLE'])('honors the hidden status field for Classic %s', async (state) => {
+      server.use(http.get('/api/v1/printers/:id/status', () => HttpResponse.json({ ...mockStatusPrinting, state })));
+      renderOverlayPage(1, '?layout=portrait&show=filename');
+      expect(await screen.findByText('Benchy')).toBeInTheDocument();
+      expect(screen.queryByText('Printer is idle')).not.toBeInTheDocument();
+      expect(screen.queryByText('Finished')).not.toBeInTheDocument();
+      expect(screen.queryByText('Failed')).not.toBeInTheDocument();
+    });
+
+    it.each(['1', '2'])('keeps disconnected and finished states truthful in artwork %s', async (artwork) => {
+      server.use(http.get('/api/v1/printers/:id/status', () => HttpResponse.json({ ...mockStatusPrinting, connected: false })));
+      const view = renderOverlayPage(1, `?layout=portrait&artwork=${artwork}`);
+      await screen.findAllByText('Printer offline');
+      expect(screen.queryByText('45%')).not.toBeInTheDocument();
+      expect(screen.queryByText('Printing')).not.toBeInTheDocument();
+      view.unmount();
+      server.use(http.get('/api/v1/printers/:id/status', () => HttpResponse.json({ ...mockStatusPrinting, state: 'FINISH' })));
+      renderOverlayPage(1, `?layout=portrait&artwork=${artwork}`);
+      expect(await screen.findByText('Finished')).toBeInTheDocument();
+      expect(screen.queryByText('Printer is idle')).not.toBeInTheDocument();
+    });
+  });
+
   describe('updated artwork', () => {
     it('maps legacy model codes in version 2', async () => {
       server.use(http.get('/api/v1/printers/:id', () => HttpResponse.json({ ...mockPrinter, model: 'BL-P001' })));
@@ -209,10 +233,11 @@ describe('StreamOverlayPage', () => {
     ])('sizes a camera turned %i degrees from its slot, not the viewport', async (rotation, expected) => {
       // A portrait source: the camera fills a 360 x 640 middle row, so the
       // viewport (the old vw/vh fallback) would be the wrong box to swap.
-      const rect = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
-        return this.classList.contains('updated-overlay__camera')
-          ? ({ width: 360, height: 640, top: 0, left: 0, right: 360, bottom: 640, x: 0, y: 0, toJSON: () => ({}) } as DOMRect)
-          : ({ width: 0, height: 0, top: 0, left: 0, right: 0, bottom: 0, x: 0, y: 0, toJSON: () => ({}) } as DOMRect);
+      const width = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockImplementation(function (this: HTMLElement) {
+        return this.classList.contains('updated-overlay__camera') ? 360 : 0;
+      });
+      const height = vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockImplementation(function (this: HTMLElement) {
+        return this.classList.contains('updated-overlay__camera') ? 640 : 0;
       });
       try {
         server.use(http.get('/api/v1/printers/:id', () => HttpResponse.json({ ...mockPrinter, camera_rotation: rotation })));
@@ -226,7 +251,8 @@ describe('StreamOverlayPage', () => {
           expect(camera.style.height).toBe('');
         }
       } finally {
-        rect.mockRestore();
+        width.mockRestore();
+        height.mockRestore();
       }
     });
 

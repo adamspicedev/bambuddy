@@ -4,7 +4,10 @@ import { Clock, Layers, Printer, Timer } from 'lucide-react';
 import './UpdatedStreamOverlay.css';
 import { overlayProgressTextStyle } from '../utils/overlayBranding';
 
+import type { OverlayLayout } from '../utils/overlayLayout';
+
 interface UpdatedStreamOverlayProps {
+  layout?: OverlayLayout;
   backgroundTransparency?: number;
   customLogo?: ReactNode;
   progressBackground?: string;
@@ -35,7 +38,9 @@ function useCameraBox(ref: RefObject<HTMLDivElement | null>, active: boolean) {
     const el = ref.current;
     if (!active || !el) return;
     const measure = () => {
-      const { width, height } = el.getBoundingClientRect();
+      // Layout dimensions exclude the scale applied by OverlayFrame.
+      const width = el.clientWidth;
+      const height = el.clientHeight;
       if (width > 0 && height > 0) {
         setBox((prev) => (prev && prev.width === width && prev.height === height ? prev : { width, height }));
       }
@@ -88,7 +93,7 @@ export function UpdatedStreamOverlay(props: UpdatedStreamOverlayProps) {
   ].filter((stat) => stat.value != null);
 
   return (
-    <div className="updated-overlay" data-size={props.size} data-state={state} style={backgroundStyle}>
+    <div className="updated-overlay" data-size={props.size} data-layout={props.layout} data-state={state} style={backgroundStyle}>
       <header className="updated-overlay__header">
         {(name || model) && (
           <div className="updated-overlay__identity">

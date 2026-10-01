@@ -5,6 +5,9 @@ import { useTranslation } from 'react-i18next';
 import { Layers, Clock, Timer, Printer, Flame, Square, Box } from 'lucide-react';
 import { useOverlayLogo } from '../hooks/useOverlayLogo';
 import { overlayGradient, overlayProgressTextStyle } from '../utils/overlayBranding';
+import { OverlayFrame } from '../components/OverlayFrame';
+import { OVERLAY_DIMENSIONS, type OverlayLayout } from '../utils/overlayLayout';
+import './StreamOverlayPage.css';
 import { UpdatedStreamOverlay } from '../components/UpdatedStreamOverlay';
 import { api, ApiError, withStreamToken } from '../api/client';
 import { formatDuration, formatETA, type TimeFormat } from '../utils/date';
@@ -16,6 +19,7 @@ type TFunction = (key: string, options?: Record<string, unknown>) => string;
 type OverlaySize = 'small' | 'medium' | 'large';
 
 interface OverlayConfig {
+  layout: OverlayLayout | null;
   size: OverlaySize;
   updatedArtwork: boolean;
   backgroundTransparency: number;
@@ -62,7 +66,9 @@ function parseConfig(params: URLSearchParams): OverlayConfig {
     ? Math.min(100, Math.max(0, transparencyParam))
     : 0;
 
+  const layout = params.get('layout');
   return {
+    layout: layout === 'portrait' || layout === 'landscape' ? layout : null,
     backgroundTransparency,
     size: (params.get('size') as OverlaySize) || 'medium',
     fps,
@@ -328,7 +334,7 @@ export function StreamOverlayPage() {
     );
   }
 
-  const isPrinting = status.state === 'RUNNING' || status.state === 'PAUSE';
+  const isPrinting = (config.layout == null || status.connected) && (status.state === 'RUNNING' || status.state === 'PAUSE');
   const progress = status.progress || 0;
 
   // Temperature readings the URL asked for, in a fixed order, skipping any the
@@ -400,7 +406,8 @@ export function StreamOverlayPage() {
     const active = status.connected && isPrinting;
     const remainingTime = status.remaining_time;
     const hasRemaining = active && config.showEta && remainingTime != null && remainingTime > 0;
-    return <UpdatedStreamOverlay
+    const artwork = <UpdatedStreamOverlay
+      layout={config.layout ?? undefined}
       backgroundTransparency={config.backgroundTransparency}
       customLogo={customLogo}
       progressBackground={progressBackground}
@@ -417,10 +424,14 @@ export function StreamOverlayPage() {
       eta={hasRemaining ? formatETA(remainingTime, timeFormat, t) : null}
       temperatures={status.connected ? tempReadings : []}
     />;
+    return config.layout ? <OverlayFrame layout={config.layout}>{artwork}</OverlayFrame> : artwork;
   }
 
-  return (
-    <div className="min-h-screen bg-black relative overflow-hidden">
+  const dimensions = config.layout ? OVERLAY_DIMENSIONS[config.layout] : null;
+  const rotation = printer?.camera_rotation ?? 0;
+  const sideways = Math.abs(rotation % 180) === 90;
+  const artwork = (
+    <div className="classic-overlay min-h-screen bg-black relative overflow-hidden" data-layout={config.layout ?? undefined} data-size={config.size}>
       {/* Camera feed - fullscreen background (optional) */}
       {config.showCamera && (
         <img
@@ -428,7 +439,12 @@ export function StreamOverlayPage() {
           src={streamUrl}
           alt={t('streamOverlay.cameraStream')}
           className="absolute inset-0 w-full h-full object-contain"
-          style={printer?.camera_rotation ? { transform: `rotate(${printer.camera_rotation}deg)` } : undefined}
+          style={dimensions ? {
+            left: '50%', top: '50%', maxWidth: 'none',
+            width: sideways ? dimensions.height : dimensions.width,
+            height: sideways ? dimensions.width : dimensions.height,
+            transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
+          } : rotation ? { transform: `rotate(${rotation}deg)` } : undefined}
           onError={handleStreamError}
         />
       )}
@@ -470,7 +486,7 @@ export function StreamOverlayPage() {
           {/* Status text */}
           {config.showStatus && (
             <div className={`${sizes.text} text-white/70 mb-2`}>
-              {getStatusText(status, t)}
+              {config.layout && !status.connected ? t('streamOverlay.printerOffline') : getStatusText(status, t)}
             </div>
           )}
 
@@ -526,8 +542,8 @@ export function StreamOverlayPage() {
             </div>
           )}
 
-          {/* Idle state */}
-          {!isPrinting && (
+          {/* Legacy fallback. Explicit layouts honor the Status field above. */}
+          {!isPrinting && config.layout == null && (
             <div className={`${sizes.text} text-white/70 py-2`}>
               {status.connected ? t('streamOverlay.printerIdle') : t('streamOverlay.printerOffline')}
             </div>
@@ -539,7 +555,7 @@ export function StreamOverlayPage() {
               so a single-nozzle machine shows one nozzle and a model without a
               chamber sensor shows no chamber row even if `chamber` is in
               ?show= (the backend omits the reading entirely for those). */}
-          {tempReadings.length > 0 && (
+          {tempReadings.length > 0 && (config.layout == null || status.connected) && (
             <div className={`flex items-center ${sizes.gap} flex-wrap mt-2`}>
               {tempReadings.map((reading) => (
                 <TempReading
@@ -557,4 +573,5 @@ export function StreamOverlayPage() {
       </div>
     </div>
   );
+  return config.layout ? <OverlayFrame layout={config.layout}>{artwork}</OverlayFrame> : artwork;
 }

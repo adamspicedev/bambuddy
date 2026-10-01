@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { screen, waitFor, fireEvent, act } from '@testing-library/react';
+import { screen, waitFor, fireEvent, act, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { render } from '../utils';
@@ -28,6 +28,60 @@ function shownUrl(): string {
 describe('StreamOverlayBuilder', () => {
   beforeEach(() => {
     server.use(http.get('/api/v1/printers', () => HttpResponse.json(printers)), http.get('/api/v1/settings/overlay-logo', () => new HttpResponse(null, { status: 404 })));
+  });
+
+  it.each(['1', '2'])('provides independent orientation URLs and previews for artwork %s', async (artwork) => {
+    const user = userEvent.setup();
+    const copy = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue();
+    vi.stubGlobal('isSecureContext', true);
+    const { unmount } = render(<StreamOverlayBuilder />);
+    await screen.findByRole('option', { name: 'P1S' });
+    await user.selectOptions(screen.getByLabelText('Artwork'), artwork);
+    const layout = screen.getByLabelText('Layout');
+    expect(layout).toHaveValue('landscape');
+    await user.selectOptions(layout, 'both');
+    expect(document.querySelectorAll('iframe')).toHaveLength(0);
+    await user.selectOptions(screen.getByLabelText('Printer'), '2');
+    await user.type(screen.getByLabelText(/token/i), 'bblt_example');
+    await user.selectOptions(screen.getByLabelText('Text size'), 'large');
+    await user.click(screen.getByLabelText('Nozzle'));
+    await user.click(screen.getByLabelText('Camera feed'));
+    await user.click(screen.getByRole('button', { name: 'Show preview' }));
+    for (const orientation of ['Landscape', 'Portrait']) {
+      const group = within(screen.getByRole('group', { name: `${orientation} URL` }));
+      const url = new URL(group.getByRole('link', { name: 'Open' }).getAttribute('href') ?? '');
+      expect(url.pathname).toBe('/overlay/2');
+      expect(url.searchParams.get('layout')).toBe(orientation.toLowerCase());
+      expect(url.searchParams.get('token')).toBe('bblt_example');
+      expect(url.searchParams.get('size')).toBe('large');
+      expect(url.searchParams.get('camera')).toBe('false');
+      expect(url.searchParams.get('show')).toContain('nozzle');
+      expect(url.searchParams.get('artwork')).toBe(artwork === '2' ? '2' : null);
+      await waitFor(() => expect(screen.getByTitle(`${orientation} preview`)).toHaveAttribute('src', url.href));
+      await user.click(group.getByRole('button', { name: 'Copy' }));
+      expect(copy).toHaveBeenLastCalledWith(url.href);
+    }
+    await user.click(screen.getByLabelText('Camera feed'));
+    await user.selectOptions(screen.getByLabelText('Text size'), 'small');
+    const fps = screen.getByLabelText('Frame rate');
+    await user.clear(fps);
+    await user.type(fps, '5');
+    for (const iframe of document.querySelectorAll('iframe')) {
+      const params = new URL(iframe.src).searchParams;
+      expect(params.get('camera')).toBeNull();
+      expect(params.get('size')).toBe('small');
+      expect(params.get('fps')).toBe('5');
+    }
+    await user.selectOptions(layout, 'portrait');
+    expect(document.querySelectorAll('iframe')).toHaveLength(1);
+    expect(screen.queryByTitle('Landscape preview')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Hide preview' }));
+    expect(document.querySelectorAll('iframe')).toHaveLength(0);
+    await user.click(screen.getByRole('button', { name: 'Show preview' }));
+    unmount();
+    expect(document.querySelectorAll('iframe')).toHaveLength(0);
+    copy.mockRestore();
+    vi.unstubAllGlobals();
   });
 
   it('starts on the first printer with the overlay defaults', async () => {
@@ -60,12 +114,12 @@ describe('StreamOverlayBuilder', () => {
     await user.click(screen.getByLabelText('Printer name'));
     expect(new URL(shownUrl()).searchParams.get('show')).toBe('printer,model,filename,status,progress,layers,eta');
     await user.click(screen.getByRole('button', { name: 'Show preview' }));
-    await waitFor(() => expect(screen.getByTitle('Overlay preview')).toHaveAttribute('src', shownUrl()));
+    await waitFor(() => expect(screen.getByTitle('Landscape preview')).toHaveAttribute('src', shownUrl()));
 
     await user.click(model);
     await user.click(screen.getByLabelText('Printer name'));
     expect(shownUrl()).toBe(originalUrl);
-    await waitFor(() => expect(screen.getByTitle('Overlay preview')).toHaveAttribute('src', originalUrl));
+    await waitFor(() => expect(screen.getByTitle('Landscape preview')).toHaveAttribute('src', originalUrl));
   });
 
   it('opts into artwork in the URL and preview and restores the original URL', async () => {
@@ -78,10 +132,10 @@ describe('StreamOverlayBuilder', () => {
     await user.selectOptions(artwork, 'Version 2');
     expect(new URL(shownUrl()).searchParams.get('artwork')).toBe('2');
     await user.click(screen.getByRole('button', { name: 'Show preview' }));
-    await waitFor(() => expect(screen.getByTitle('Overlay preview')).toHaveAttribute('src', shownUrl()));
+    await waitFor(() => expect(screen.getByTitle('Landscape preview')).toHaveAttribute('src', shownUrl()));
     await user.selectOptions(artwork, 'Classic');
     expect(shownUrl()).toBe(original);
-    await waitFor(() => expect(screen.getByTitle('Overlay preview')).toHaveAttribute('src', original));
+    await waitFor(() => expect(screen.getByTitle('Landscape preview')).toHaveAttribute('src', original));
   });
 
   it('only offers background transparency for Version 2 and preserves its selection', async () => {
@@ -96,7 +150,7 @@ describe('StreamOverlayBuilder', () => {
     fireEvent.change(slider, { target: { value: '65' } });
     expect(new URL(shownUrl()).searchParams.get('backgroundTransparency')).toBe('65');
     await user.click(screen.getByRole('button', { name: 'Show preview' }));
-    await waitFor(() => expect(screen.getByTitle('Overlay preview')).toHaveAttribute('src', shownUrl()));
+    await waitFor(() => expect(screen.getByTitle('Landscape preview')).toHaveAttribute('src', shownUrl()));
     await user.selectOptions(artwork, 'Classic');
     expect(screen.queryByRole('slider', { name: /Background transparency/ })).not.toBeInTheDocument();
     expect(shownUrl()).not.toContain('backgroundTransparency');
@@ -108,7 +162,7 @@ describe('StreamOverlayBuilder', () => {
     const user = userEvent.setup();
     render(<StreamOverlayBuilder />);
 
-    await waitFor(() => expect(screen.getByLabelText('Printer')).toBeInTheDocument());
+    await screen.findByRole('option', { name: 'P1S' });
     await user.selectOptions(screen.getByLabelText('Printer'), '2');
 
     await waitFor(() => expect(shownUrl()).toContain('/overlay/2'));
@@ -242,17 +296,17 @@ it('uploads a logo, includes it in the URL, and removes it from the preview', as
     expect(await screen.findByRole('img', { name: 'Custom logo' })).toHaveAttribute('src', 'blob:logo-preview');
     expect(new URL(shownUrl()).searchParams.get('logo')).toBe('1');
     await user.click(screen.getByRole('button', { name: 'Show preview' }));
-    await waitFor(() => expect(screen.getByTitle('Overlay preview')).toHaveAttribute('src', shownUrl()));
-    const previousPreview = screen.getByTitle('Overlay preview');
+    await waitFor(() => expect(screen.getByTitle('Landscape preview')).toHaveAttribute('src', shownUrl()));
+    const previousPreview = screen.getByTitle('Landscape preview');
     const previousUrl = shownUrl();
     await user.upload(screen.getByLabelText('Upload logo'), new File(['new png'], 'replacement.png', { type: 'image/png' }));
-    await waitFor(() => expect(screen.getByTitle('Overlay preview')).not.toBe(previousPreview));
+    await waitFor(() => expect(screen.getByTitle('Landscape preview')).not.toBe(previousPreview));
     expect(shownUrl()).toBe(previousUrl);
     expect(await screen.findByRole('img', { name: 'Custom logo' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Remove' }));
     await waitFor(() => expect(screen.queryByRole('img', { name: 'Custom logo' })).not.toBeInTheDocument());
     expect(new URL(shownUrl()).searchParams.has('logo')).toBe(false);
-    await waitFor(() => expect(screen.getByTitle('Overlay preview')).toHaveAttribute('src', shownUrl()));
+    await waitFor(() => expect(screen.getByTitle('Landscape preview')).toHaveAttribute('src', shownUrl()));
   } finally {
     create.mockRestore();
     revoke.mockRestore();
@@ -268,25 +322,25 @@ it('debounces continuous preview changes and cancels a pending reload when hidde
   await screen.findByRole('option', { name: 'X1 Carbon' });
   fireEvent.change(screen.getByLabelText('Artwork'), { target: { value: '2' } });
   fireEvent.click(screen.getByRole('button', { name: 'Show preview' }));
-  const original = screen.getByTitle('Overlay preview');
+  const original = screen.getByTitle('Landscape preview');
   vi.useFakeTimers();
   try {
     fireEvent.change(screen.getByLabelText('From colour'), { target: { value: '#ff0000' } });
     act(() => vi.advanceTimersByTime(200));
     fireEvent.change(screen.getByRole('slider', { name: /Background transparency/ }), { target: { value: '65' } });
     act(() => vi.advanceTimersByTime(299));
-    expect(screen.getByTitle('Overlay preview')).toBe(original);
+    expect(screen.getByTitle('Landscape preview')).toBe(original);
     expect(original).not.toHaveAttribute('src', shownUrl());
     act(() => vi.advanceTimersByTime(1));
-    expect(screen.getByTitle('Overlay preview')).not.toBe(original);
-    expect(screen.getByTitle('Overlay preview')).toHaveAttribute('src', shownUrl());
+    expect(screen.getByTitle('Landscape preview')).not.toBe(original);
+    expect(screen.getByTitle('Landscape preview')).toHaveAttribute('src', shownUrl());
 
     fireEvent.change(screen.getByLabelText('From colour'), { target: { value: '#0000ff' } });
     fireEvent.click(screen.getByRole('button', { name: 'Hide preview' }));
     act(() => vi.advanceTimersByTime(300));
-    expect(screen.queryByTitle('Overlay preview')).not.toBeInTheDocument();
+    expect(screen.queryByTitle('Landscape preview')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Show preview' }));
-    expect(screen.getByTitle('Overlay preview')).toHaveAttribute('src', shownUrl());
+    expect(screen.getByTitle('Landscape preview')).toHaveAttribute('src', shownUrl());
     fireEvent.click(screen.getByRole('button', { name: 'Hide preview' }));
   } finally {
     vi.useRealTimers();
