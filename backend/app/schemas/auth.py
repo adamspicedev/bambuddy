@@ -694,6 +694,7 @@ class OIDCLinkResponse(BaseModel):
 class EncryptionRowCounts(BaseModel):
     oidc_providers: int
     user_totp: int
+    overlay_tokens: int = 0
 
 
 class EncryptionStatusResponse(BaseModel):

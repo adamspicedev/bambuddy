@@ -16,6 +16,7 @@
  * to-clipboard modal. Listings only ever show metadata.
  */
 import { useEffect, useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Copy, Plus, Trash2, AlertTriangle } from 'lucide-react';
 import { api, type LongLivedCameraToken, type LongLivedTokenScope } from '../api/client';
@@ -39,14 +40,15 @@ function isExpired(iso: string): boolean {
 
 interface CreateTokenFormProps {
   onCreated: (token: LongLivedCameraToken) => void;
+  fixedScope?: LongLivedTokenScope;
 }
 
-function CreateTokenForm({ onCreated }: CreateTokenFormProps) {
+export function CreateTokenForm({ onCreated, fixedScope }: CreateTokenFormProps) {
   const { t } = useTranslation();
   const { showToast } = useToast();
   const [name, setName] = useState('');
   const [days, setDays] = useState<number>(DEFAULT_LIFETIME_DAYS);
-  const [scope, setScope] = useState<LongLivedTokenScope>('camera_stream');
+  const [scope, setScope] = useState<LongLivedTokenScope>(fixedScope ?? 'camera_stream');
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -57,16 +59,16 @@ function CreateTokenForm({ onCreated }: CreateTokenFormProps) {
       const created = await api.createLongLivedCameraToken({
         name: name.trim(),
         expires_in_days: days,
-        scope,
+        scope: fixedScope ?? scope,
       });
       onCreated(created);
       setName('');
       setDays(DEFAULT_LIFETIME_DAYS);
-      setScope('camera_stream');
+      setScope(fixedScope ?? 'camera_stream');
       showToast(t('cameraTokens.toast.created', 'Token created'));
-    } catch (err) {
+    } catch {
       showToast(
-        err instanceof Error ? err.message : t('cameraTokens.toast.createFailed', 'Failed to create token'),
+        t('cameraTokens.toast.createFailed', 'Failed to create token'),
         'error',
       );
     } finally {
@@ -77,12 +79,12 @@ function CreateTokenForm({ onCreated }: CreateTokenFormProps) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-bambu-dark-secondary rounded-lg p-4 mb-6 border border-bambu-dark-tertiary"
+      className="@container/token-form min-w-0 bg-bambu-dark-secondary rounded-lg p-4 mb-6 border border-bambu-dark-tertiary"
     >
       <h3 className="text-base font-semibold text-white mb-3">
         {t('cameraTokens.create.title', 'Create new token')}
       </h3>
-      <div className="grid gap-3 md:grid-cols-[1fr_180px_140px_auto]">
+      <div className="grid grid-cols-1 gap-3 @min-[26rem]/token-form:grid-cols-2 @min-[44rem]/token-form:grid-cols-[minmax(0,1fr)_180px_140px_auto]">
         <input
           type="text"
           maxLength={100}
@@ -90,13 +92,14 @@ function CreateTokenForm({ onCreated }: CreateTokenFormProps) {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder={t('cameraTokens.create.namePlaceholder', 'e.g. Home Assistant')}
-          className="px-3 py-2 bg-bambu-dark rounded-md text-white border border-bambu-dark-tertiary focus:border-bambu-green focus:outline-none"
+          className="min-w-0 w-full px-3 py-2 bg-bambu-dark rounded-md text-white border border-bambu-dark-tertiary focus:border-bambu-green focus:outline-none"
           aria-label={t('cameraTokens.create.nameLabel', 'Token name')}
         />
         <select
           value={scope}
+          disabled={!!fixedScope}
           onChange={(e) => setScope(e.target.value as LongLivedTokenScope)}
-          className="px-3 py-2 bg-bambu-dark rounded-md text-white border border-bambu-dark-tertiary focus:border-bambu-green focus:outline-none"
+          className="min-w-0 w-full px-3 py-2 bg-bambu-dark rounded-md text-white border border-bambu-dark-tertiary focus:border-bambu-green focus:outline-none"
           aria-label={t('cameraTokens.create.scopeLabel', 'Scope')}
         >
           <option value="camera_stream">{t('cameraTokens.scope.camera_stream', 'Camera stream')}</option>
@@ -116,13 +119,13 @@ function CreateTokenForm({ onCreated }: CreateTokenFormProps) {
             // 400s on submit.
             setDays(Math.min(Math.max(next, 1), MAX_LIFETIME_DAYS));
           }}
-          className="px-3 py-2 bg-bambu-dark rounded-md text-white border border-bambu-dark-tertiary focus:border-bambu-green focus:outline-none"
+          className="min-w-0 w-full px-3 py-2 bg-bambu-dark rounded-md text-white border border-bambu-dark-tertiary focus:border-bambu-green focus:outline-none"
           aria-label={t('cameraTokens.create.daysLabel', 'Days until expiry')}
         />
         <button
           type="submit"
           disabled={submitting || !name.trim()}
-          className="flex items-center gap-2 px-4 py-2 bg-bambu-green text-white rounded-md hover:bg-bambu-green/90 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="min-w-0 flex items-center justify-center gap-2 px-4 py-2 bg-bambu-green text-white rounded-md hover:bg-bambu-green/90 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Plus className="w-4 h-4" />
           {t('cameraTokens.create.submit', 'Create')}
@@ -146,7 +149,7 @@ function CreateTokenForm({ onCreated }: CreateTokenFormProps) {
       </p>
       <p className="text-xs text-bambu-gray mt-1">
         {t(
-          'cameraTokens.create.hint',
+          scope === 'overlay' ? 'streamOverlay.builder.savedHint' : 'cameraTokens.create.hint',
           'Maximum lifetime is 365 days. The token value is shown only once on creation — copy it now.',
         )}
       </p>
@@ -269,7 +272,7 @@ function JustCreatedModal({ token, onClose }: JustCreatedModalProps) {
             </h2>
             <p className="text-sm text-bambu-gray mt-1">
               {t(
-                'cameraTokens.created.warning',
+                token.scope === 'overlay' ? 'streamOverlay.builder.savedHint' : 'cameraTokens.created.warning',
                 'This is the only time this token will be visible. After you close this dialog you can never view it again.',
               )}
             </p>
@@ -366,7 +369,7 @@ function TokenRow({ token, showOwner, ownerLabel, onRevoke }: TokenRowProps) {
   const expired = isExpired(token.expires_at);
   return (
     <tr className="border-b border-bambu-dark-tertiary last:border-b-0">
-      <td className="py-3 px-3 text-white">{token.name}</td>
+      <td className="py-3 px-3 text-white break-words max-w-64">{token.name}</td>
       {showOwner && <td className="py-3 px-3 text-bambu-gray">{ownerLabel}</td>}
       <td className="py-3 px-3">
         <span className="rounded bg-bambu-dark-tertiary px-2 py-0.5 text-xs text-bambu-gray">
@@ -449,6 +452,7 @@ function TokenTable({ tokens, showOwner, userIdToName, onRevoke, emptyMessage }:
  * Settings → API Keys (the canonical home) or any other host card.
  */
 export function CameraTokensSection() {
+  const queryClient = useQueryClient();
   const { t } = useTranslation();
   const { user, isAdmin } = useAuth();
   const { showToast } = useToast();
@@ -508,6 +512,7 @@ export function CameraTokensSection() {
     setPendingRevoke(null);
     try {
       await api.revokeLongLivedCameraToken(id);
+      void queryClient.invalidateQueries({ queryKey: ['overlay-tokens'] });
       showToast(t('cameraTokens.toast.revoked', 'Token revoked'));
       await refresh();
     } catch (err) {
@@ -534,7 +539,8 @@ export function CameraTokensSection() {
 
       <CreateTokenForm
         onCreated={(token) => {
-          setJustCreated(token);
+          if (token.scope !== 'overlay') setJustCreated(token);
+          void queryClient.invalidateQueries({ queryKey: ['overlay-tokens'] });
           void refresh();
         }}
       />

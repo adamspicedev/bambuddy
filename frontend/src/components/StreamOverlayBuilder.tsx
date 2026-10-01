@@ -4,17 +4,20 @@
  * The overlay at /overlay/{printerId} has been configurable by query string
  * since #2613, but only for people who found the parameters in the wiki. The
  * issue asked for the field set to be selectable "through the web UI"; this is
- * that surface. It composes a URL, it does not persist anything — the URL *is*
- * the configuration, which keeps a scene in OBS reproducible by copy-paste and
- * means two displays can show different fields off one token.
+ * that surface. Appearance is configured in the URL. Saved overlay credentials
+ * are retrieved separately for their owner and held only in component memory.
  */
 import { useEffect, useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Copy, ExternalLink, Eye, EyeOff } from 'lucide-react';
+import { parseUTCDate } from '../utils/date';
 import { api, type Printer } from '../api/client';
 import { useToast } from '../contexts/ToastContext';
 import { OverlayBrandingControls } from './OverlayBrandingControls';
 import { DEFAULT_BRANDING } from '../utils/overlayBranding';
+import { useAuth } from '../contexts/AuthContext';
+import { CreateTokenForm } from '../pages/CameraTokensPage';
 import { NumberInput } from './NumberInput';
 import { OverlayFrame } from './OverlayFrame';
 import { OVERLAY_DIMENSIONS, type OverlayLayout } from '../utils/overlayLayout';
@@ -42,9 +45,51 @@ const DEFAULT_FIELDS = ['progress', 'layers', 'eta', 'filename', 'status'];
 
 const DEFAULT_FPS = 15;
 
-export function StreamOverlayBuilder() {
+export function StreamOverlayBuilder({ onTokenCreated }: { onTokenCreated?: () => void }) {
   const { t } = useTranslation();
   const { showToast } = useToast();
+  const { user, hasPermission } = useAuth();
+  const [creatingToken, setCreatingToken] = useState(false);
+  const [revealToken, setRevealToken] = useState(false);
+  const queryClient = useQueryClient();
+  const [selectedTokenId, setSelectedTokenId] = useState('');
+  const [secret, setSecret] = useState({ id: '', value: '' });
+  const [secretError, setSecretError] = useState(false);
+  const [expiryRevision, setExpiryRevision] = useState(0);
+  const [secretRequestRevision, setSecretRequestRevision] = useState(0);
+  const canManageTokens = !!user && hasPermission('camera:view');
+  const { data: savedTokens = [], isPending: tokensPending, isError: tokensError, refetch } = useQuery({
+    queryKey: ['overlay-tokens', user?.id],
+    queryFn: api.listMyLongLivedCameraTokens,
+    enabled: canManageTokens,
+  });
+  const overlayTokens = savedTokens.filter((saved) => saved.scope === 'overlay');
+  const isExpired = (expires: string) => (parseUTCDate(expires)?.getTime() ?? 0) <= Date.now();
+  const selectedToken = overlayTokens.find((saved) => String(saved.id) === selectedTokenId);
+  const selectedTokenExpired = !!selectedToken && isExpired(selectedToken.expires_at);
+  useEffect(() => {
+    if (!selectedToken || selectedTokenExpired) return;
+    const remaining = (parseUTCDate(selectedToken.expires_at)?.getTime() ?? 0) - Date.now();
+    const timer = window.setTimeout(() => setExpiryRevision((revision) => revision + 1), Math.min(Math.max(remaining, 0), 86400000));
+    return () => window.clearTimeout(timer);
+  }, [selectedToken, selectedTokenExpired, expiryRevision]);
+  const token = selectedToken?.can_reuse && !isExpired(selectedToken.expires_at) && secret.id === selectedTokenId
+    ? secret.value : '';
+  const tokenUnavailable = selectedTokenId !== '' && !token;
+
+  useEffect(() => {
+    let cancelled = false;
+    setSecretError(false);
+    setSecret({ id: '', value: '' });
+    if (!canManageTokens || !selectedToken?.can_reuse || isExpired(selectedToken.expires_at)) return;
+    const id = String(selectedToken.id);
+    void api.retrieveOverlayToken(selectedToken.id).then((result) => {
+      if (!cancelled) setSecret({ id, value: result.token });
+    }).catch(() => {
+      if (!cancelled) setSecretError(true);
+    });
+    return () => { cancelled = true; };
+  }, [canManageTokens, selectedToken?.id, selectedToken?.can_reuse, selectedToken?.expires_at, selectedTokenExpired, secretRequestRevision]);
 
   const [printers, setPrinters] = useState<Printer[]>([]);
   const [printerId, setPrinterId] = useState<number | null>(null);
@@ -56,7 +101,6 @@ export function StreamOverlayBuilder() {
   const [artwork, setArtwork] = useState<'1' | '2'>('1');
   const [backgroundTransparency, setBackgroundTransparency] = useState(0);
   const [showCamera, setShowCamera] = useState(true);
-  const [token, setToken] = useState('');
   const [branding, setBranding] = useState(DEFAULT_BRANDING);
   const [layout, setLayout] = useState<OverlayLayout | 'both'>('landscape');
   const [preview, setPreview] = useState(false);
@@ -68,7 +112,7 @@ export function StreamOverlayBuilder() {
         const list = await api.getPrinters();
         if (cancelled) return;
         setPrinters(list);
-        if (list.length > 0) setPrinterId(list[0].id);
+        if (list.length > 0) setPrinterId((current) => current ?? list[0].id);
       } catch {
         // A failed printer list only costs the picker its options — the builder
         // still works if the user types a printer number into the URL by hand,
@@ -109,6 +153,12 @@ export function StreamOverlayBuilder() {
     });
   }, [printerId, fields, size, fps, showCamera, token, artwork, layout, branding, backgroundTransparency]);
 
+  const displayedUrl = (url: string) => {
+    const masked = new URL(url);
+    if (masked.searchParams.has('token') && !revealToken) masked.searchParams.set('token', '••••••••');
+    return masked.toString();
+  };
+
   const toggleField = (key: string) => {
     setFields((prev) => (prev.includes(key) ? prev.filter((f) => f !== key) : [...prev, key]));
   };
@@ -127,7 +177,7 @@ export function StreamOverlayBuilder() {
         document.body.appendChild(ta);
         try {
           ta.select();
-          document.execCommand('copy');
+          if (!document.execCommand('copy')) throw new Error();
         } finally {
           document.body.removeChild(ta);
         }
@@ -139,7 +189,7 @@ export function StreamOverlayBuilder() {
   };
 
   return (
-    <div>
+    <div className="@container/overlay min-w-0">
       <p className="text-sm text-bambu-gray mb-4">
         {t(
           'streamOverlay.builder.description',
@@ -147,7 +197,23 @@ export function StreamOverlayBuilder() {
         )}
       </p>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="mb-4 space-y-2">
+        {user && hasPermission('camera:view') && (
+          <button type="button" onClick={() => setCreatingToken((current) => !current)} className="px-3 py-2 bg-bambu-dark-tertiary text-white rounded-md">
+            {t(creatingToken ? 'common.cancel' : 'streamOverlay.builder.createToken')}
+          </button>
+        )}
+        {creatingToken && user && hasPermission('camera:view') && <CreateTokenForm fixedScope="overlay" onCreated={(created) => {
+          if (!created.token) return;
+          setPreview(false);
+          void queryClient.invalidateQueries({ queryKey: ['overlay-tokens'] });
+          setSelectedTokenId(String(created.id));
+          setRevealToken(false);
+          setCreatingToken(false);
+          onTokenCreated?.();
+        }} />}
+      </div>
+      <div className="grid grid-cols-1 gap-4 @min-[28rem]/overlay:grid-cols-2">
         <div>
           <label
             htmlFor="overlay-builder-printer"
@@ -263,17 +329,37 @@ export function StreamOverlayBuilder() {
           <label htmlFor="overlay-builder-token" className="block text-sm font-medium text-white mb-1">
             {t('streamOverlay.builder.token', 'Streaming Overlay token (optional)')}
           </label>
-          <input
+          <select
             id="overlay-builder-token"
-            type="text"
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            placeholder="bblt_…"
-            className="w-full px-3 py-2 bg-bambu-dark rounded-md text-white border border-bambu-dark-tertiary focus:border-bambu-green focus:outline-none font-mono text-xs"
-          />
+            value={selectedTokenId}
+            disabled={!canManageTokens || tokensPending}
+            onChange={(event) => {
+              setPreview(false);
+              setRevealToken(false);
+              setSelectedTokenId(event.target.value);
+            }}
+            className="w-full min-w-0 px-3 py-2 bg-bambu-dark rounded-md text-white border border-bambu-dark-tertiary"
+          >
+            <option value="">{t('streamOverlay.builder.noToken')}</option>
+            {overlayTokens.map((saved) => (
+              <option key={saved.id} value={saved.id} disabled={!saved.can_reuse || isExpired(saved.expires_at)}>
+                {saved.name}{isExpired(saved.expires_at) ? ` (${t('cameraTokens.list.expired')})` : !saved.can_reuse ? ` (${t('streamOverlay.builder.legacyToken')})` : ''}
+              </option>
+            ))}
+          </select>
+          {(tokensError || secretError) && <p role="alert" className="mt-2 text-sm text-red-400">{t('streamOverlay.builder.tokenLoadError')}</p>}
+          {(tokensError || secretError) && <button type="button" onClick={() => {
+            if (tokensError) void refetch();
+            if (secretError) setSecretRequestRevision((revision) => revision + 1);
+          }} className="text-sm text-bambu-gray">{t('common.retry')}</button>}
+          {selectedTokenExpired && <p role="alert" className="mt-2 text-sm text-red-400">{t('streamOverlay.builder.tokenExpired')}</p>}
+          {tokenUnavailable && !selectedTokenExpired && !secretError && selectedToken?.can_reuse && <p role="status" className="mt-2 text-sm text-bambu-gray">{t('common.loading')}</p>}
+          <button type="button" disabled={!token} onClick={() => setRevealToken((current) => !current)} className="mt-2 text-sm text-bambu-gray disabled:opacity-50">
+            {t(revealToken ? 'streamOverlay.builder.hideToken' : 'streamOverlay.builder.showToken')}
+          </button>
           <p className="text-xs text-bambu-gray mt-1">
             {t(
-              'streamOverlay.builder.tokenHint',
+              'streamOverlay.builder.savedHint',
               'Only needed when login is enabled: OBS has no session of its own. Create one above with the Streaming Overlay scope.',
             )}
           </p>
@@ -284,7 +370,7 @@ export function StreamOverlayBuilder() {
         <legend className="text-sm font-medium text-white mb-2">
           {t('streamOverlay.builder.fields', 'Fields to show')}
         </legend>
-        <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-2 @min-[24rem]/overlay:grid-cols-2 @min-[36rem]/overlay:grid-cols-3">
           {FIELDS.map((field) => (
             <label key={field.key} className="flex items-center gap-2 text-sm text-bambu-gray">
               <input
@@ -327,7 +413,7 @@ export function StreamOverlayBuilder() {
             </p>
             <div className="flex flex-wrap items-center gap-2">
               <code className="w-full px-3 py-2 bg-bambu-dark rounded-md text-bambu-green text-xs break-all font-mono select-all">
-                {url}
+                {displayedUrl(url)}
               </code>
               <button type="button" onClick={() => void copyUrl(url)}
                 className="flex items-center gap-2 px-3 py-2 bg-bambu-green text-white rounded-md hover:bg-bambu-green/90">
@@ -359,8 +445,9 @@ export function StreamOverlayBuilder() {
       <div className="mt-4">
         <button
           type="button"
+          disabled={tokenUnavailable}
           onClick={() => setPreview((p) => !p)}
-          className="flex items-center gap-2 px-3 py-2 bg-bambu-dark-tertiary text-white rounded-md hover:bg-bambu-dark-tertiary/80 text-sm"
+          className="flex items-center gap-2 px-3 py-2 bg-bambu-dark-tertiary text-white rounded-md hover:bg-bambu-dark-tertiary/80 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {preview ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           {preview

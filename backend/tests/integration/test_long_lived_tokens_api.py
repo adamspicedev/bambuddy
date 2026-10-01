@@ -319,3 +319,105 @@ class TestCameraStreamTokenVerification:
         await _setup_admin(async_client, suffix="_verify_garbage")
         assert await verify_camera_stream_token("bblt_aaaaaaaa_garbage") is False
         assert await verify_camera_stream_token("not-a-real-token") is False
+
+
+class TestSavedOverlayTokens:
+    async def test_owner_can_retrieve_encrypted_overlay_token(self, async_client, db_session, monkeypatch):
+        from backend.app.models.long_lived_token import LongLivedToken
+
+        jwt = await _setup_admin(async_client, suffix="_saved")
+        headers = {"Authorization": f"Bearer {jwt}"}
+        created = await async_client.post(
+            "/api/v1/auth/tokens", headers=headers, json={"name": "OBS", "scope": "overlay", "expires_in_days": 30}
+        )
+        assert created.status_code == 201
+        body = created.json()
+        row = await db_session.get(LongLivedToken, body["id"])
+        assert row.encrypted_token.startswith("fernet:")
+        assert body["token"] not in row.encrypted_token
+        listing = (await async_client.get("/api/v1/auth/tokens", headers=headers)).json()
+        assert listing[0]["token"] is None
+        assert listing[0]["can_reuse"] is True
+        # Simulate a process restart: retrieval must load the persisted key.
+        from backend.app.core import encryption
+
+        monkeypatch.setattr(encryption, "_fernet_instance", None)
+        recovered = await async_client.post(f"/api/v1/auth/tokens/{body['id']}/overlay-secret", headers=headers)
+        assert recovered.status_code == 200
+        assert recovered.json()["token"] == body["token"]
+        assert recovered.headers["cache-control"] == "no-store"
+        await async_client.delete(f"/api/v1/auth/tokens/{body['id']}", headers=headers)
+        assert (
+            await async_client.post(f"/api/v1/auth/tokens/{body['id']}/overlay-secret", headers=headers)
+        ).status_code == 404
+        await db_session.refresh(row)
+        assert row.encrypted_token is None
+
+    async def test_admin_cannot_retrieve_another_owners_token(self, async_client):
+        admin = await _setup_admin(async_client, suffix="_ownership")
+        await _create_user(async_client, admin, "overlay_owner")
+        owner = await _login(async_client, "overlay_owner")
+        created = await async_client.post(
+            "/api/v1/auth/tokens",
+            headers={"Authorization": f"Bearer {owner}"},
+            json={"name": "OBS", "scope": "overlay", "expires_in_days": 30},
+        )
+        response = await async_client.post(
+            f"/api/v1/auth/tokens/{created.json()['id']}/overlay-secret", headers={"Authorization": f"Bearer {admin}"}
+        )
+        assert response.status_code == 404
+
+    @pytest.mark.parametrize("kind", ["legacy", "expired", "wrong_scope", "wrong_key", "plaintext", "mismatched"])
+    async def test_unavailable_secret_is_never_returned(self, async_client, db_session, kind):
+        from datetime import datetime, timedelta, timezone
+
+        from backend.app.models.long_lived_token import LongLivedToken
+
+        jwt = await _setup_admin(async_client, suffix=f"_{kind}")
+        headers = {"Authorization": f"Bearer {jwt}"}
+        created = await async_client.post(
+            "/api/v1/auth/tokens", headers=headers, json={"name": "OBS", "scope": "overlay", "expires_in_days": 30}
+        )
+        row = await db_session.get(LongLivedToken, created.json()["id"])
+        expected = 404
+        if kind == "legacy":
+            row.encrypted_token = None
+            expected = 409
+        elif kind == "expired":
+            row.expires_at = datetime.now(timezone.utc) - timedelta(days=1)
+        elif kind == "wrong_scope":
+            row.scope = "camwall"
+        elif kind == "plaintext":
+            row.encrypted_token = created.json()["token"]
+            expected = 503
+        elif kind == "mismatched":
+            from backend.app.core.encryption import encrypt_secret_required
+
+            row.encrypted_token = encrypt_secret_required("bblt_other_token")
+            expected = 503
+        else:
+            row.encrypted_token = "fernet:invalid"
+            expected = 503
+        await db_session.commit()
+        response = await async_client.post(f"/api/v1/auth/tokens/{row.id}/overlay-secret", headers=headers)
+        assert response.status_code == expected
+        assert created.json()["token"] not in response.text
+
+    async def test_creation_fails_closed_without_encryption(self, async_client, monkeypatch):
+        from backend.app.core import encryption
+
+        jwt = await _setup_admin(async_client, suffix="_nokey")
+        monkeypatch.setattr(encryption, "_get_fernet", lambda: None)
+        headers = {"Authorization": f"Bearer {jwt}"}
+        response = await async_client.post(
+            "/api/v1/auth/tokens", headers=headers, json={"name": "OBS", "scope": "overlay", "expires_in_days": 30}
+        )
+        assert response.status_code == 503
+        assert (await async_client.get("/api/v1/auth/tokens", headers=headers)).json() == []
+
+    async def test_retrieval_requires_authentication(self, async_client):
+        response = await async_client.post("/api/v1/auth/tokens/1/overlay-secret")
+        assert response.status_code == 403
+        await _setup_admin(async_client, suffix="_requires_login")
+        response = await async_client.post("/api/v1/auth/tokens/1/overlay-secret")
+        assert response.status_code == 401

@@ -8,9 +8,9 @@ Why a separate table from ``AuthEphemeralToken``:
 
 - These are user-owned, named, and revocable from the UI — different
   lifecycle from ephemeral / single-use tokens.
-- Hashed at rest (bcrypt). Ephemeral tokens are stored as raw strings
-  because their short TTL caps the impact of a DB read; a long-lived
-  token must survive a DB dump unscathed.
+- Hashed for verification. New overlay tokens also have an encrypted copy
+  for owner reuse; the encryption key is stored outside the database. Other
+  long-lived scopes remain hash-only.
 
 Why a separate table from ``api_keys``:
 
@@ -35,7 +35,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.app.core.database import Base
@@ -59,8 +59,10 @@ class LongLivedToken(Base):
     # verify() can fetch one row instead of scanning + bcrypting all rows.
     # Format: ``bblt_<8-char-prefix>_<32-char-secret>``.
     lookup_prefix: Mapped[str] = mapped_column(String(8), nullable=False, index=True)
-    # bcrypt hash of the 32-char secret part. Never stored or returned in plaintext.
+    # Password hash used for authentication for every token scope.
     secret_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    # Only new overlay tokens are recoverable by their owner. Legacy rows stay NULL.
+    encrypted_token: Mapped[str | None] = mapped_column(Text, nullable=True)
     # V1: only "camera_stream" is accepted. Column exists so future scopes
     # don't need a schema migration.
     scope: Mapped[str] = mapped_column(String(32), nullable=False, default="camera_stream")

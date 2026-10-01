@@ -236,3 +236,18 @@ def mfa_decrypt(value: str) -> str:
             "Key rotation is not currently supported — restore the previous key "
             "or have users re-enroll."
         ) from exc
+
+
+def encrypt_secret_required(plaintext: str) -> str:
+    """Encrypt a recoverable credential, refusing the legacy plaintext fallback."""
+    f = _get_fernet()
+    if f is None:
+        raise RuntimeError("Secret encryption is unavailable")
+    return _FERNET_PREFIX + f.encrypt(plaintext.encode()).decode()
+
+
+def decrypt_secret_required(ciphertext: str) -> str:
+    """Read only encrypted credentials; never accept a plaintext database value."""
+    if not ciphertext.startswith(_FERNET_PREFIX):
+        raise RuntimeError("Stored secret is not encrypted")
+    return mfa_decrypt(ciphertext)

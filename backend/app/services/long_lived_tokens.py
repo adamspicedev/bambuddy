@@ -2,7 +2,7 @@
 
 Token format: ``bblt_<8-char-prefix>_<32-char-secret>``.
 
-- The full token is shown to the user **exactly once** at create time.
+- Overlay tokens have an encrypted copy for owner-only reuse; other scopes remain show-once.
 - ``lookup_prefix`` (the 8-char middle part) is indexed and used to cheaply
   fetch the candidate row — at most one in practice — without scanning the
   whole table on every request.
@@ -30,6 +30,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.core.auth import get_password_hash, verify_password
+from backend.app.core.encryption import encrypt_secret_required
 from backend.app.models.long_lived_token import LongLivedToken
 
 # Issue #1108 hard cap. Bump here if policy changes — UI default is shorter
@@ -71,7 +72,7 @@ _SECRET_LEN = 32  # urlsafe characters → ~190 bits of entropy
 @dataclass(frozen=True)
 class CreatedToken:
     """Returned to the route on create. ``plaintext`` is shown to the user
-    exactly once and never persisted; only ``record`` survives in the DB.
+    on creation; overlay records retain an encrypted copy for later owner retrieval.
     """
 
     record: LongLivedToken
@@ -151,6 +152,7 @@ async def create_token(
         name=name,
         lookup_prefix=lookup_prefix,
         secret_hash=get_password_hash(hash_input),
+        encrypted_token=encrypt_secret_required(plaintext) if scope == "overlay" else None,
         scope=scope,
         expires_at=now + timedelta(days=expires_in_days),
     )
@@ -239,5 +241,6 @@ async def revoke_token(db: AsyncSession, token_id: int) -> bool:
     if record is None or record.revoked_at is not None:
         return False
     record.revoked_at = datetime.now(timezone.utc)
+    record.encrypted_token = None
     await db.commit()
     return True
