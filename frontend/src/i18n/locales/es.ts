@@ -3591,6 +3591,17 @@ export default {
 
   // Stream overlay
   streamOverlay: {
+    branding: {
+      title: "Identidad visual",
+      hint: "Un logotipo compartido para esta instalación. PNG o WebP, hasta 2 MiB y 4 millones de píxeles. Reemplazarlo o eliminarlo afecta a las superposiciones que lo utilizan.",
+      upload: "Subir logotipo",
+      logo: "Logotipo personalizado",
+      from: "Color inicial",
+      to: "Color final",
+      reset: "Restablecer colores",
+      failed: "No se pudo guardar el logotipo. Comprueba el formato y el tamaño.",
+    },
+
     title: 'Superposición de transmisión',
     invalidPrinterId: 'ID de impresora no válido',
     cameraStream: 'Transmisión de la cámara',

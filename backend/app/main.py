@@ -55,6 +55,7 @@ from backend.app.api.routes import (
     notifications,
     obico,
     orca_cloud,
+    overlay_branding,
     pending_uploads,
     pipeline_runs,
     print_log,
@@ -10043,6 +10044,7 @@ app = FastAPI(
 # =============================================================================
 # Public routes that don't require authentication even when auth is enabled
 PUBLIC_API_ROUTES = {
+    "/api/v1/overlay-branding/logo",  # Route enforces overlay-scoped token authentication.
     # Auth routes needed before/during login
     "/api/v1/auth/status",
     "/api/v1/auth/login",
@@ -10534,6 +10536,7 @@ app.include_router(finance.router, prefix=app_settings.api_prefix)
 app.include_router(inventory.router, prefix=app_settings.api_prefix)
 app.include_router(labels.router, prefix=app_settings.api_prefix)
 app.include_router(settings_routes.router, prefix=app_settings.api_prefix)
+app.include_router(overlay_branding.router, prefix=app_settings.api_prefix)
 app.include_router(cloud.router, prefix=app_settings.api_prefix)
 app.include_router(orca_cloud.router, prefix=app_settings.api_prefix)
 app.include_router(local_presets.router, prefix=app_settings.api_prefix)

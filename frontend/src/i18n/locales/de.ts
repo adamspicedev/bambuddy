@@ -3589,6 +3589,17 @@ export default {
 
   // Stream overlay
   streamOverlay: {
+    branding: {
+      title: "Markenauftritt",
+      hint: "Ein gemeinsames Logo für diese Installation. PNG oder WebP, bis zu 2 MiB und 4 Millionen Pixel. Ersetzen oder Entfernen betrifft alle Overlays, die es verwenden.",
+      upload: "Logo hochladen",
+      logo: "Eigenes Logo",
+      from: "Startfarbe",
+      to: "Endfarbe",
+      reset: "Farben zurücksetzen",
+      failed: "Logo konnte nicht gespeichert werden. Bildformat und Größe prüfen.",
+    },
+
     title: 'Stream-Overlay',
     invalidPrinterId: 'Ungültige Drucker-ID',
     cameraStream: 'Kamera-Stream',

@@ -3576,6 +3576,17 @@ export default {
 
   // Stream overlay
   streamOverlay: {
+    branding: {
+      title: "品牌设置",
+      hint: "此安装共享一个徽标。支持 PNG 或 WebP，最大 2 MiB 和 400 万像素。替换或删除会影响使用该徽标的叠加层。",
+      upload: "上传徽标",
+      logo: "自定义徽标",
+      from: "起始颜色",
+      to: "结束颜色",
+      reset: "重置颜色",
+      failed: "无法保存徽标。请检查图片格式和大小。",
+    },
+
     title: '流叠加层',
     invalidPrinterId: '无效的打印机 ID',
     cameraStream: '摄像头流',

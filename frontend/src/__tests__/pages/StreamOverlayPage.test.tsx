@@ -106,6 +106,28 @@ describe('StreamOverlayPage', () => {
     vi.unstubAllGlobals();
   });
 
+  it.each(['1', '2'])('uses the requested gradient in artwork %s', async (artwork) => {
+    server.use(http.get('/api/v1/printers/:id/status', () => HttpResponse.json(mockStatusPrinting)));
+    const { container } = renderOverlayPage(1, `?artwork=${artwork}&progressFrom=%23ff0000&progressTo=%230000ff`);
+    await screen.findByAltText('Bambuddy');
+    const bar = container.querySelector('[style*="width: 45%"]');
+    expect(bar).toHaveStyle({ width: '45%', background: 'linear-gradient(to right, #ff0000, #0000ff)' });
+    for (const text of [screen.getByText('Progress'), screen.getByText('45%')]) {
+      expect(text).toHaveStyle({
+        'background-image': 'linear-gradient(to right, #ff0000, #0000ff)',
+        'background-clip': 'text',
+        color: 'rgba(0, 0, 0, 0)',
+      });
+    }
+  });
+
+  it.each(['1', '2'])('ignores malformed branding colours in artwork %s', async (artwork) => {
+    server.use(http.get('/api/v1/printers/:id/status', () => HttpResponse.json(mockStatusPrinting)));
+    const { container } = renderOverlayPage(1, `?artwork=${artwork}&progressFrom=red&progressTo=%230000ff`);
+    await screen.findByAltText('Bambuddy');
+    expect(container.querySelector('[style*="linear-gradient"]')).toBeNull();
+  });
+
   describe('updated artwork', () => {
     it('maps legacy model codes in version 2', async () => {
       server.use(http.get('/api/v1/printers/:id', () => HttpResponse.json({ ...mockPrinter, model: 'BL-P001' })));

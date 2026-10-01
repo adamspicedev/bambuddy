@@ -3589,6 +3589,17 @@ export default {
 
   // Stream overlay
   streamOverlay: {
+    branding: {
+      title: "ブランド設定",
+      hint: "このインストールで共有するロゴです。PNG または WebP、最大 2 MiB、400 万画素。変更や削除は使用中のオーバーレイにも反映されます。",
+      upload: "ロゴをアップロード",
+      logo: "カスタムロゴ",
+      from: "開始色",
+      to: "終了色",
+      reset: "色をリセット",
+      failed: "ロゴを保存できませんでした。画像の形式とサイズを確認してください。",
+    },
+
     title: 'ストリームオーバーレイ',
     invalidPrinterId: '無効なプリンターID',
     cameraStream: 'カメラストリーム',

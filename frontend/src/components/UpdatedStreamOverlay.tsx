@@ -2,8 +2,11 @@ import { useLayoutEffect, useRef, useState, type ReactNode, type RefObject } fro
 import { useTranslation } from 'react-i18next';
 import { Clock, Layers, Printer, Timer } from 'lucide-react';
 import './UpdatedStreamOverlay.css';
+import { overlayProgressTextStyle } from '../utils/overlayBranding';
 
 interface UpdatedStreamOverlayProps {
+  customLogo?: ReactNode;
+  progressBackground?: string;
   size: 'small' | 'medium' | 'large';
   camera: { url: string; rotation: number; onError: () => void } | null;
   name: string | null;
@@ -52,6 +55,7 @@ export function UpdatedStreamOverlay(props: UpdatedStreamOverlayProps) {
   const { t } = useTranslation();
   const { camera, name, model, filename, status, state, progress, layers, remaining, eta, temperatures } =
     props;
+  const progressTextStyle = overlayProgressTextStyle(props.progressBackground);
   const hasPanel =
     filename || status || progress != null || layers || remaining || eta || temperatures.length > 0;
   const rotation = camera?.rotation ?? 0;
@@ -76,14 +80,16 @@ export function UpdatedStreamOverlay(props: UpdatedStreamOverlayProps) {
             </div>
           </div>
         )}
-        <a
-          className="updated-overlay__logo"
-          href="https://github.com/maziggy/bambuddy"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src="/img/bambuddy_logo_powered_by.png" alt="Bambuddy" />
-        </a>
+        <div className="updated-overlay__logo flex flex-col items-end">
+          {props.customLogo}
+          <a
+            href="https://github.com/maziggy/bambuddy"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <img src="/img/bambuddy_logo_powered_by.png" alt="Bambuddy" />
+          </a>
+        </div>
       </header>
       {camera && (
         <div className="updated-overlay__camera" ref={cameraRef}>
@@ -116,7 +122,7 @@ export function UpdatedStreamOverlay(props: UpdatedStreamOverlayProps) {
           )}
           {progress != null && (
             <div className="updated-overlay__progress">
-              <span>{t('streamOverlay.progress')}</span>
+              <span style={progressTextStyle}>{t('streamOverlay.progress')}</span>
               <div
                 role="progressbar"
                 aria-label={t('streamOverlay.progress')}
@@ -124,9 +130,9 @@ export function UpdatedStreamOverlay(props: UpdatedStreamOverlayProps) {
                 aria-valuemax={100}
                 aria-valuenow={progress}
               >
-                <div style={{ width: `${progress}%` }} />
+                <div style={{ width: `${progress}%`, background: props.progressBackground }} />
               </div>
-              <strong>{Math.round(progress)}%</strong>
+              <strong style={progressTextStyle}>{Math.round(progress)}%</strong>
             </div>
           )}
           {(stats.length > 0 || temperatures.length > 0) && (

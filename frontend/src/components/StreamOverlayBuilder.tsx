@@ -13,6 +13,8 @@ import { useTranslation } from 'react-i18next';
 import { Copy, ExternalLink, Eye, EyeOff } from 'lucide-react';
 import { api, type Printer } from '../api/client';
 import { useToast } from '../contexts/ToastContext';
+import { OverlayBrandingControls } from './OverlayBrandingControls';
+import { DEFAULT_BRANDING } from '../utils/overlayBranding';
 import { NumberInput } from './NumberInput';
 
 type OverlaySize = 'small' | 'medium' | 'large';
@@ -52,6 +54,7 @@ export function StreamOverlayBuilder() {
   const [artwork, setArtwork] = useState<'1' | '2'>('1');
   const [showCamera, setShowCamera] = useState(true);
   const [token, setToken] = useState('');
+  const [branding, setBranding] = useState(DEFAULT_BRANDING);
   const [preview, setPreview] = useState(false);
 
   useEffect(() => {
@@ -85,9 +88,14 @@ export function StreamOverlayBuilder() {
     if (fps !== DEFAULT_FPS) params.set('fps', String(fps));
     if (artwork !== '1') params.set('artwork', artwork);
     if (!showCamera) params.set('camera', 'false');
+    if (branding.logo) params.set('logo', '1');
+    if (branding.from && branding.to) {
+      params.set('progressFrom', branding.from);
+      params.set('progressTo', branding.to);
+    }
     if (token.trim()) params.set('token', token.trim());
     return `${window.location.origin}/overlay/${id}?${params.toString()}`;
-  }, [printerId, fields, size, fps, showCamera, token, artwork]);
+  }, [printerId, fields, size, fps, showCamera, token, artwork, branding]);
 
   const toggleField = (key: string) => {
     setFields((prev) => (prev.includes(key) ? prev.filter((f) => f !== key) : [...prev, key]));
@@ -126,6 +134,8 @@ export function StreamOverlayBuilder() {
           'Build the URL for a streaming overlay — a full-screen camera view with live print data drawn over it, for OBS, a wall display, or any browser source. Pick the fields you want and copy the URL.',
         )}
       </p>
+
+      <OverlayBrandingControls value={branding} onChange={setBranding} />
 
       <div className="grid gap-4 md:grid-cols-2">
         <div>
@@ -310,7 +320,7 @@ export function StreamOverlayBuilder() {
         </button>
         {preview && (
           <iframe
-            key={url}
+            key={`${url}:${branding.logoRevision}`}
             src={url}
             title={t('streamOverlay.builder.previewTitle', 'Overlay preview')}
             className="mt-3 w-full aspect-video rounded-md border border-bambu-dark-tertiary bg-black"

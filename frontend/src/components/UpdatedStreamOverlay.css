@@ -58,7 +58,7 @@
   flex-shrink: 0;
   margin-left: auto;
 }
-.updated-overlay__logo img {
+.updated-overlay__logo > a img {
   width: clamp(100px, 19vmin, 230px);
   height: auto;
 }

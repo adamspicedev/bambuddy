@@ -3577,6 +3577,17 @@ export default {
 
   // Stream overlay
   streamOverlay: {
+    branding: {
+      title: "Identité visuelle",
+      hint: "Un logo partagé pour cette installation. PNG ou WebP, jusqu’à 2 Mio et 4 millions de pixels. Son remplacement ou sa suppression affecte les incrustations qui l’utilisent.",
+      upload: "Importer un logo",
+      logo: "Logo personnalisé",
+      from: "Couleur de départ",
+      to: "Couleur de fin",
+      reset: "Réinitialiser les couleurs",
+      failed: "Impossible d’enregistrer le logo. Vérifiez le format et la taille.",
+    },
+
     title: 'Superposition Flux',
     invalidPrinterId: 'ID invalide',
     cameraStream: 'Flux caméra',
