@@ -4046,6 +4046,7 @@ export default {
     generateThumbnailsForMissing: 'Miniaturen genereren voor STL- en PDF-bestanden die ze missen',
     gridView: 'Rasterweergave',
     listView: 'Lijstweergave',
+    columnsView: 'Kolomweergave',
     lowDiskSpaceWarning: 'Waarschuwing weinig schijfruimte',
     lowDiskSpaceDetails: 'Slechts {{free}} vrij van {{total}} totaal. De drempel is in de instellingen ingesteld op {{threshold}} GB.',
     files: 'Bestanden',
@@ -4128,6 +4129,7 @@ export default {
     adding: 'Toevoegen...',
     loadingFiles: 'Bestanden laden...',
     folderIsEmpty: 'Map is leeg',
+    noFilesOutsideFolders: 'Geen bestanden buiten mappen',
     noFilesYet: 'Nog geen bestanden',
     folderEmptyDescription: 'Upload bestanden of verplaats bestanden naar deze map om te beginnen.',
     noFilesDescription: 'Upload bestanden om je afdrukgerelateerde bestanden te organiseren.',
@@ -6926,6 +6928,12 @@ export default {
     cancel: 'Annuleren',
     configuring: 'Configureren...',
     configureSlot: 'Sleuf configureren',
+    // Why an Orca profile went into the slot as the generic for its material (#3216)
+    orcaFallback: {
+      no_filament_id: 'Dit Orca-profiel heeft geen eigen filament-ID, dus OrcaSlicer ziet deze sleuf als Generic {{material}}.',
+      lookup_failed: 'De filament-ID van dit profiel kon niet uit Orca Cloud worden gelezen, dus OrcaSlicer ziet deze sleuf als Generic {{material}}. Probeer het zo opnieuw.',
+      no_permission: 'Je hebt geen toegang tot Orca Cloud, dus de filament-ID van dit profiel kon niet worden gelezen. OrcaSlicer ziet deze sleuf als Generic {{material}}.',
+    },
   },
 
   // Git Backup Settings

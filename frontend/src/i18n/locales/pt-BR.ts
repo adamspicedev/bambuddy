@@ -4003,6 +4003,7 @@ export default {
     generateThumbnailsForMissing: 'Gerar miniaturas para arquivos STL e PDF que não possuem',
     gridView: 'Visualização em grade',
     listView: 'Visualização em lista',
+    columnsView: 'Visualização em colunas',
     lowDiskSpaceWarning: 'Aviso de pouco espaço em disco',
     lowDiskSpaceDetails: 'Apenas {{free}} livres de {{total}} no total. O limite está definido para {{threshold}} GB nas configurações.',
     files: 'Arquivos',
@@ -4085,6 +4086,7 @@ export default {
     adding: 'Adicionando...',
     loadingFiles: 'Carregando arquivos...',
     folderIsEmpty: 'A pasta está vazia',
+    noFilesOutsideFolders: 'Nenhum arquivo fora das pastas',
     noFilesYet: 'Nenhum arquivo ainda',
     folderEmptyDescription: 'Envie arquivos ou mova arquivos para esta pasta para começar.',
     noFilesDescription: 'Envie arquivos para começar a organizar seus arquivos relacionados à impressão.',
@@ -6862,6 +6864,12 @@ export default {
     cancel: 'Cancelar',
     configuring: 'Configurando...',
     configureSlot: 'Configurar Slot',
+    // Why an Orca profile went into the slot as the generic for its material (#3216)
+    orcaFallback: {
+      no_filament_id: 'Este perfil do Orca não tem um ID de filamento próprio, então o OrcaSlicer verá este slot como Generic {{material}}.',
+      lookup_failed: 'Não foi possível ler o ID de filamento deste perfil no Orca Cloud, então o OrcaSlicer verá este slot como Generic {{material}}. Tente novamente em instantes.',
+      no_permission: 'Você não tem acesso ao Orca Cloud, então o ID de filamento deste perfil não pôde ser lido. O OrcaSlicer verá este slot como Generic {{material}}.',
+    },
   },
 
   // Git Backup Settings

@@ -4010,6 +4010,7 @@ export default {
     generateThumbnailsForMissing: 'Eksik olan STL ve PDF dosyaları için küçük resimler oluştur',
     gridView: 'Izgara görünümü',
     listView: 'Liste görünümü',
+    columnsView: 'Sütun görünümü',
     lowDiskSpaceWarning: 'Düşük disk alanı uyarısı',
     lowDiskSpaceDetails: 'Toplam {{total}} alandan yalnızca {{free}} boş. Eşik ayarlarda {{threshold}} GB olarak ayarlanmış.',
     files: 'Dosyalar',
@@ -4092,6 +4093,7 @@ export default {
     adding: 'Ekleniyor...',
     loadingFiles: 'Dosyalar yükleniyor...',
     folderIsEmpty: 'Klasör boş',
+    noFilesOutsideFolders: 'Klasör dışında dosya yok',
     noFilesYet: 'Henüz dosya yok',
     folderEmptyDescription: 'Başlamak için bu klasöre dosya yükleyin veya dosyaları taşıyın.',
     noFilesDescription: 'Baskıyla ilgili dosyalarınızı organize etmeye başlamak için dosya yükleyin.',
@@ -6817,6 +6819,12 @@ export default {
     cancel: 'İptal',
     configuring: 'Yapılandırılıyor...',
     configureSlot: 'Yuvayı Yapılandır',
+    // Why an Orca profile went into the slot as the generic for its material (#3216)
+    orcaFallback: {
+      no_filament_id: 'Bu Orca profilinin kendine ait bir filament kimliği yok, bu yüzden OrcaSlicer bu yuvayı Generic {{material}} olarak görecek.',
+      lookup_failed: 'Bu profilin filament kimliği Orca Cloud\'dan okunamadı, bu yüzden OrcaSlicer bu yuvayı Generic {{material}} olarak görecek. Birazdan tekrar deneyin.',
+      no_permission: 'Orca Cloud erişiminiz yok, bu yüzden bu profilin filament kimliği okunamadı. OrcaSlicer bu yuvayı Generic {{material}} olarak görecek.',
+    },
   },
 
   // Git Yedekleme Ayarları

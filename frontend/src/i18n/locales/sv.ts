@@ -4045,6 +4045,7 @@ errors: {
     generateThumbnailsForMissing: 'Generera minibilder för STL- och PDF-filer som saknar dem',
     gridView: 'Rutnätsvy',
     listView: 'Listvy',
+    columnsView: 'Kolumnvy',
     lowDiskSpaceWarning: 'Varning för lågt diskutrymme',
     lowDiskSpaceDetails: 'Endast {{free}} ledigt av {{total}} totalt. Tröskelvärdet är inställt på {{threshold}} GB i inställningar.',
     files: 'Filer',
@@ -4127,6 +4128,7 @@ errors: {
     adding: 'Lägger till...',
     loadingFiles: 'Laddar filer...',
     folderIsEmpty: 'Mappen är tom',
+    noFilesOutsideFolders: 'Inga filer utanför mappar',
     noFilesYet: 'Inga filer än',
     folderEmptyDescription: 'Ladda upp filer eller flytta filer till denna mapp för att komma igång.',
     noFilesDescription: 'Ladda upp filer för att börja organisera dina utskriftsrelaterade filer.',
@@ -6924,6 +6926,12 @@ errors: {
     cancel: 'Avbryt',
     configuring: 'Konfigurerar...',
     configureSlot: 'Konfigurera fack',
+    // Why an Orca profile went into the slot as the generic for its material (#3216)
+    orcaFallback: {
+      no_filament_id: 'Den här Orca-profilen har inget eget filament-ID, så OrcaSlicer kommer att se den här platsen som Generic {{material}}.',
+      lookup_failed: 'Det gick inte att läsa profilens filament-ID från Orca Cloud, så OrcaSlicer kommer att se den här platsen som Generic {{material}}. Försök igen om en stund.',
+      no_permission: 'Du har inte åtkomst till Orca Cloud, så profilens filament-ID kunde inte läsas. OrcaSlicer kommer att se den här platsen som Generic {{material}}.',
+    },
   },
 
   // Git Backup Settings

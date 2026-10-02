@@ -4003,6 +4003,7 @@ export default {
     generateThumbnailsForMissing: '为缺少缩略图的 STL 和 PDF 文件生成缩略图',
     gridView: '网格视图',
     listView: '列表视图',
+    columnsView: '分栏视图',
     lowDiskSpaceWarning: '磁盘空间不足警告',
     lowDiskSpaceDetails: '仅剩 {{free}}（总共 {{total}}）。阈值设置为 {{threshold}} GB。',
     files: '文件',
@@ -4085,6 +4086,7 @@ export default {
     adding: '添加中...',
     loadingFiles: '加载文件中...',
     folderIsEmpty: '文件夹为空',
+    noFilesOutsideFolders: '文件夹外没有文件',
     noFilesYet: '暂无文件',
     folderEmptyDescription: '上传文件或将文件移入此文件夹以开始使用。',
     noFilesDescription: '上传文件以开始组织您的打印相关文件。',
@@ -6860,6 +6862,12 @@ export default {
     cancel: '取消',
     configuring: '配置中...',
     configureSlot: '配置槽位',
+    // Why an Orca profile went into the slot as the generic for its material (#3216)
+    orcaFallback: {
+      no_filament_id: '此 Orca 配置文件没有自己的耗材 ID，因此 OrcaSlicer 会将此槽位识别为 Generic {{material}}。',
+      lookup_failed: '无法从 Orca Cloud 读取此配置文件的耗材 ID，因此 OrcaSlicer 会将此槽位识别为 Generic {{material}}。请稍后重试。',
+      no_permission: '你没有 Orca Cloud 访问权限，因此无法读取此配置文件的耗材 ID。OrcaSlicer 会将此槽位识别为 Generic {{material}}。',
+    },
   },
 
   // Git Backup Settings

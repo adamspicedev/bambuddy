@@ -4016,6 +4016,7 @@ export default {
     generateThumbnailsForMissing: 'サムネイルのないSTL・PDFファイルのサムネイルを生成',
     gridView: 'グリッド表示',
     listView: 'リスト表示',
+    columnsView: 'カラム表示',
     lowDiskSpaceWarning: 'ディスク容量不足の警告',
     lowDiskSpaceDetails: '{{total}}中{{free}}の空き容量のみ。しきい値は設定で{{threshold}}GBに設定されています。',
     files: 'ファイル',
@@ -4098,6 +4099,7 @@ export default {
     adding: '追加中...',
     loadingFiles: 'ファイルを読み込み中...',
     folderIsEmpty: 'フォルダーは空です',
+    noFilesOutsideFolders: 'フォルダー外のファイルはありません',
     noFilesYet: 'ファイルはまだありません',
     folderEmptyDescription: 'ファイルをアップロードするか、このフォルダーにファイルを移動して開始しましょう。',
     noFilesDescription: '印刷関連ファイルの整理を始めるにはファイルをアップロードしてください。',
@@ -6876,6 +6878,12 @@ export default {
     cancel: 'キャンセル',
     configuring: '設定中...',
     configureSlot: 'スロットを設定',
+    // Why an Orca profile went into the slot as the generic for its material (#3216)
+    orcaFallback: {
+      no_filament_id: 'このOrcaプロファイルには独自のフィラメントIDがないため、OrcaSlicerではこのスロットがGeneric {{material}}として表示されます。',
+      lookup_failed: 'Orca CloudからこのプロファイルのフィラメントIDを読み取れなかったため、OrcaSlicerではこのスロットがGeneric {{material}}として表示されます。しばらくしてから再試行してください。',
+      no_permission: 'Orca Cloudへのアクセス権がないため、このプロファイルのフィラメントIDを読み取れませんでした。OrcaSlicerではこのスロットがGeneric {{material}}として表示されます。',
+    },
   },
 
   // Git Backup Settings

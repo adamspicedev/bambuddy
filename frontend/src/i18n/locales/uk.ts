@@ -4043,6 +4043,7 @@ export default {
     generateThumbnailsForMissing: "Створити відсутні мініатюри файлів STL і PDF",
     gridView: "Вигляд сітки",
     listView: "Перегляд списку",
+    columnsView: "Вигляд колонок",
     lowDiskSpaceWarning: "Попередження про брак місця на диску",
     lowDiskSpaceDetails: "Вільно лише {{free}} із {{total}}. У налаштуваннях задано поріг {{threshold}} ГБ.",
     files: "Файли",
@@ -4125,6 +4126,7 @@ export default {
     adding: "Додавання...",
     loadingFiles: "Завантаження файлів...",
     folderIsEmpty: "Папка порожня",
+    noFilesOutsideFolders: "Немає файлів поза папками",
     noFilesYet: "Файлів ще немає",
     folderEmptyDescription: "Щоб почати, вивантажте файли або перемістіть їх до цієї папки.",
     noFilesDescription: "Вивантажте файли, щоб упорядковувати матеріали для друку.",
@@ -6916,6 +6918,12 @@ export default {
     cancel: "Скасувати",
     configuring: "Налаштування...",
     configureSlot: "Налаштувати слот",
+    // Why an Orca profile went into the slot as the generic for its material (#3216)
+    orcaFallback: {
+      no_filament_id: 'Цей профіль Orca не має власного ID філаменту, тому OrcaSlicer бачитиме цей слот як Generic {{material}}.',
+      lookup_failed: 'Не вдалося прочитати ID філаменту цього профілю з Orca Cloud, тому OrcaSlicer бачитиме цей слот як Generic {{material}}. Спробуйте ще раз за хвилину.',
+      no_permission: 'У вас немає доступу до Orca Cloud, тому ID філаменту цього профілю не вдалося прочитати. OrcaSlicer бачитиме цей слот як Generic {{material}}.',
+    },
   },
 
   // Git Backup Settings

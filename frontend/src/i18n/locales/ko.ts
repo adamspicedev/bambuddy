@@ -3825,6 +3825,7 @@ export default {
     generateThumbnailsForMissing: '썸네일이 없는 STL 및 PDF 파일의 썸네일 생성',
     gridView: '격자 보기',
     listView: '목록 보기',
+    columnsView: '열 보기',
     lowDiskSpaceWarning: '디스크 공간 부족 경고',
     lowDiskSpaceDetails: '전체 {{total}} 중 {{free}}만 남음. 임계값은 설정에서 {{threshold}}GB로 설정됩니다.',
     files: '파일',
@@ -3907,6 +3908,7 @@ export default {
     adding: '추가 중...',
     loadingFiles: '파일 불러오는 중...',
     folderIsEmpty: '폴더가 비어 있음',
+    noFilesOutsideFolders: '폴더 밖에 있는 파일 없음',
     noFilesYet: '파일 없음',
     folderEmptyDescription: '파일을 업로드하거나 이 폴더로 이동하여 시작하세요.',
     noFilesDescription: '파일을 업로드하여 인쇄 관련 파일을 정리하세요.',
@@ -6560,7 +6562,13 @@ export default {
     resetSlot: '슬롯 초기화',
     cancel: '취소',
     configuring: '구성 중...',
-    configureSlot: '슬롯 구성'
+    configureSlot: '슬롯 구성',
+    // Why an Orca profile went into the slot as the generic for its material (#3216)
+    orcaFallback: {
+      no_filament_id: '이 Orca 프로필에는 자체 필라멘트 ID가 없어 OrcaSlicer에서 이 슬롯이 Generic {{material}}(으)로 표시됩니다.',
+      lookup_failed: 'Orca Cloud에서 이 프로필의 필라멘트 ID를 읽지 못해 OrcaSlicer에서 이 슬롯이 Generic {{material}}(으)로 표시됩니다. 잠시 후 다시 시도하세요.',
+      no_permission: 'Orca Cloud 접근 권한이 없어 이 프로필의 필라멘트 ID를 읽을 수 없었습니다. OrcaSlicer에서 이 슬롯이 Generic {{material}}(으)로 표시됩니다.',
+    },
   },
   githubBackup: {
     title: 'Git 백업',

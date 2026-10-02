@@ -3817,6 +3817,7 @@ export default {
     generateThumbnailsForMissing: "Создать отсутствующие миниатюры для STL- и PDF-файлов",
     gridView: "Плитка",
     listView: "Список",
+    columnsView: "Колонки",
     lowDiskSpaceWarning: "Мало свободного места",
     lowDiskSpaceDetails: "Свободно только {{free}} из {{total}}. Порог предупреждения в настройках: {{threshold}} ГБ.",
     files: "Файлы",
@@ -3899,6 +3900,7 @@ export default {
     adding: "Добавление...",
     loadingFiles: "Загрузка файлов...",
     folderIsEmpty: "Папка пуста",
+    noFilesOutsideFolders: "Нет файлов вне папок",
     noFilesYet: "Файлов пока нет",
     folderEmptyDescription: "Загрузите или переместите файлы в эту папку.",
     noFilesDescription: "Загрузите файлы, чтобы начать упорядочивать материалы для печати.",
@@ -6548,6 +6550,12 @@ export default {
     cancel: "Отмена",
     configuring: "Настройка...",
     configureSlot: "Настроить слот",
+    // Why an Orca profile went into the slot as the generic for its material (#3216)
+    orcaFallback: {
+      no_filament_id: 'У этого профиля Orca нет собственного ID филамента, поэтому OrcaSlicer увидит этот слот как Generic {{material}}.',
+      lookup_failed: 'Не удалось прочитать ID филамента этого профиля из Orca Cloud, поэтому OrcaSlicer увидит этот слот как Generic {{material}}. Повторите попытку чуть позже.',
+      no_permission: 'У вас нет доступа к Orca Cloud, поэтому ID филамента этого профиля прочитать не удалось. OrcaSlicer увидит этот слот как Generic {{material}}.',
+    },
   },
   githubBackup: {
     title: "Резервное копирование в Git",
