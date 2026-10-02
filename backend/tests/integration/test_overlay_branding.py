@@ -5,6 +5,8 @@ import io
 import pytest
 from PIL import Image
 
+from backend.tests.overlay_helpers import mint_token, setup_admin
+
 pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
 
 
@@ -48,10 +50,9 @@ async def test_rejects_invalid_uploads(async_client, tmp_path, monkeypatch, cont
 
 async def test_logo_auth_and_token_scope(async_client, tmp_path, monkeypatch):
     from backend.app.core.config import settings
-    from backend.tests.integration.test_overlay_status_api import _mint, _setup_admin
 
     monkeypatch.setattr(settings, "base_dir", tmp_path)
-    jwt = await _setup_admin(async_client, suffix="_branding")
+    jwt = await setup_admin(async_client, suffix="_branding")
     headers = {"Authorization": f"Bearer {jwt}"}
     response = await async_client.post(
         "/api/v1/settings/overlay-logo",
@@ -63,7 +64,7 @@ async def test_logo_auth_and_token_scope(async_client, tmp_path, monkeypatch):
     assert (await async_client.get("/api/v1/settings/overlay-logo")).status_code == 401
     assert (await async_client.get("/api/v1/overlay-branding/logo")).status_code == 401
     for scope in ("camera_stream", "camwall", "overlay"):
-        token = await _mint(async_client, jwt, scope=scope, name=scope)
+        token = await mint_token(async_client, jwt, scope=scope, name=scope)
         response = await async_client.get("/api/v1/overlay-branding/logo", params={"token": token})
         assert response.status_code == (200 if scope == "overlay" else 401)
         assert (await async_client.delete("/api/v1/settings/overlay-logo", params={"token": token})).status_code == 401

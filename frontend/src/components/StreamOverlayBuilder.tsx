@@ -139,8 +139,6 @@ export function StreamOverlayBuilder() {
         )}
       </p>
 
-      <OverlayBrandingControls value={branding} onChange={setBranding} />
-
       <div className="grid gap-4 md:grid-cols-2">
         <div>
           <label
@@ -292,6 +290,8 @@ export function StreamOverlayBuilder() {
         </p>
       </fieldset>
 
+      <OverlayBrandingControls value={branding} onChange={setBranding} />
+
       <div className="mt-4">
         <p className="text-sm font-medium text-white mb-1">
           {t('streamOverlay.builder.urlTitle', 'Overlay URL')}
@@ -344,14 +344,31 @@ export function StreamOverlayBuilder() {
             : t('streamOverlay.builder.showPreview', 'Show preview')}
         </button>
         {preview && (
-          <iframe
-            key={`${url}:${branding.logoRevision}`}
-            src={url}
+          <OverlayPreview
+            url={url}
+            logoRevision={branding.logoRevision}
             title={t('streamOverlay.builder.previewTitle', 'Overlay preview')}
-            className="mt-3 w-full aspect-video rounded-md border border-bambu-dark-tertiary bg-black"
           />
         )}
       </div>
     </div>
   );
+}
+
+function OverlayPreview({ url, logoRevision, title }: { url: string; logoRevision: number; title: string }) {
+  const [source, setSource] = useState({ url, logoRevision });
+
+  useEffect(() => {
+    // Colour and transparency controls emit continuously while dragging.
+    // Wait for them to settle before opening another camera stream.
+    const timeout = window.setTimeout(() => setSource({ url, logoRevision }), 300);
+    return () => window.clearTimeout(timeout);
+  }, [url, logoRevision]);
+
+  return <iframe
+    key={`${source.url}:${source.logoRevision}`}
+    src={source.url}
+    title={title}
+    className="mt-3 w-full aspect-video rounded-md border border-bambu-dark-tertiary bg-black"
+  />;
 }

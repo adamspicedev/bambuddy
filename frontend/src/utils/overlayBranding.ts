@@ -9,7 +9,6 @@ export interface OverlayBranding {
 
 export const DEFAULT_BRANDING: OverlayBranding = { logo: false, logoRevision: 0, from: '', to: '' };
 
-
 // Only six-digit hex colours can reach CSS. Invalid or missing pairs preserve
 // the artwork's existing progress colour, including its state-specific styling.
 export function isOverlayColour(value: string): boolean {

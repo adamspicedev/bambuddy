@@ -10144,7 +10144,6 @@ app = FastAPI(
 # =============================================================================
 # Public routes that don't require authentication even when auth is enabled
 PUBLIC_API_ROUTES = {
-    "/api/v1/overlay-branding/logo",  # Route enforces overlay-scoped token authentication.
     # Auth routes needed before/during login
     "/api/v1/auth/status",
     "/api/v1/auth/login",
@@ -10183,6 +10182,8 @@ PUBLIC_API_ROUTES = {
     # rejects an absent, expired, revoked, or wrong-scoped token. In particular a
     # plain ``camera_stream`` token does NOT open this door.
     "/api/v1/camwall/printers",
+    # Overlay branding: the route enforces overlay-scoped token authentication.
+    "/api/v1/overlay-branding/logo",
 }
 
 # Route prefixes that are public (for routes with dynamic segments)

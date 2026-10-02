@@ -24,8 +24,8 @@ export function OverlayBrandingControls({ value, onChange }: {
       if (file) await api.uploadOverlayLogo(file);
       else await api.deleteOverlayLogo();
       onChange({ ...value, logo: file !== null, logoRevision: value.logoRevision + 1 });
-    } catch {
-      showToast(t('streamOverlay.branding.failed'), 'error');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : t('streamOverlay.branding.failed'), 'error');
     } finally {
       setBusy(false);
     }

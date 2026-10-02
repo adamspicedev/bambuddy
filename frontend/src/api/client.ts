@@ -4617,6 +4617,7 @@ export interface AuthStatus {
 
 // API functions
 export const api = {
+  // Overlay branding
   getOverlayLogo: async (token: string | null, signal?: AbortSignal): Promise<Blob | null> => {
     const endpoint = token ? `/overlay-branding/logo?token=${encodeURIComponent(token)}` : '/settings/overlay-logo';
     const response = await fetch(`${API_BASE}${endpoint}`, {
@@ -4634,9 +4635,15 @@ export const api = {
       method: 'POST', body,
       headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
     });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      const detail = error?.detail;
+      const message = typeof detail === 'string' ? detail : detail?.message;
+      throw new Error(typeof message === 'string' && message ? message : `HTTP ${response.status}`);
+    }
   },
   deleteOverlayLogo: () => request<{ status: string }>('/settings/overlay-logo', { method: 'DELETE' }),
+
   // Authentication
   getAuthStatus: () => request<AuthStatus>('/auth/status'),
   setupAuth: (data: SetupRequest) =>
