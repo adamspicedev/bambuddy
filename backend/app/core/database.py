@@ -1810,11 +1810,6 @@ async def _migrate_failure_reason_vocabulary(conn):
         logger.info("[#2974] converted %d failure_reason value(s) to the canonical vocabulary", total)
 
 
-async def _migrate_saved_overlay_tokens(conn):
-    """Keep existing hashes intact; only tokens created after upgrade are recoverable."""
-    await _safe_execute(conn, "ALTER TABLE long_lived_tokens ADD COLUMN encrypted_token TEXT")
-
-
 async def run_migrations(conn):
     """Run all schema migrations and data backfills on startup.
 
@@ -1828,9 +1823,6 @@ async def run_migrations(conn):
     swallowed.
     """
     from sqlalchemy import text
-
-    # Recoverable overlay credentials; legacy token hashes remain valid.
-    await _migrate_saved_overlay_tokens(conn)
 
     # Existing PostgreSQL databases predate the finance ORM tables. These must
     # exist before any ALTER TABLE / CREATE INDEX statements below reference

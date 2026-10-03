@@ -98,7 +98,7 @@ export function SecurityStatusCard() {
   }
 
   const totalLegacy = data.legacy_plaintext_rows.oidc_providers + data.legacy_plaintext_rows.user_totp;
-  const totalEncrypted = data.encrypted_rows.oidc_providers + data.encrypted_rows.user_totp + (data.encrypted_rows.overlay_tokens ?? 0);
+  const totalEncrypted = data.encrypted_rows.oidc_providers + data.encrypted_rows.user_totp;
 
   // Severity selection — order matters: red first (recovery), then orange
   // (backup hint for auto-generated key), then yellow (legacy rows), green
@@ -177,7 +177,7 @@ export function SecurityStatusCard() {
           <div>
             <p className="text-bambu-gray">{t('settings.encryption.encryptedRowsLabel')}</p>
             <p className="font-medium">
-              OIDC: {data.encrypted_rows.oidc_providers} · TOTP: {data.encrypted_rows.user_totp} · {t('cameraTokens.scope.overlay')}: {data.encrypted_rows.overlay_tokens ?? 0}
+              OIDC: {data.encrypted_rows.oidc_providers} · TOTP: {data.encrypted_rows.user_totp}
             </p>
           </div>
           <div>

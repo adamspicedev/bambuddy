@@ -4,14 +4,12 @@
  * The overlay at /overlay/{printerId} has been configurable by query string
  * since #2613, but only for people who found the parameters in the wiki. The
  * issue asked for the field set to be selectable "through the web UI"; this is
- * that surface. Appearance is configured in the URL. Saved overlay credentials
- * are retrieved separately for their owner and held only in component memory.
+ * that surface. Appearance is configured in the URL. Tokens entered, imported, or created
+ * here remain in component memory; existing credentials cannot be recovered.
  */
-import { useEffect, useMemo, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Copy, ExternalLink, Eye, EyeOff } from 'lucide-react';
-import { parseUTCDate } from '../utils/date';
 import { api, type Printer } from '../api/client';
 import { useToast } from '../contexts/ToastContext';
 import { OverlayBrandingControls } from './OverlayBrandingControls';
@@ -50,48 +48,13 @@ export function StreamOverlayBuilder({ onTokenCreated }: { onTokenCreated?: () =
   const { showToast } = useToast();
   const { user, hasPermission } = useAuth();
   const [creatingToken, setCreatingToken] = useState(false);
+  const tokenGeneration = useRef(0);
+  const formGeneration = tokenGeneration.current;
   const [revealToken, setRevealToken] = useState(false);
-  const queryClient = useQueryClient();
-  const [selectedTokenId, setSelectedTokenId] = useState('');
   const [manualToken, setManualToken] = useState('');
-  const [secret, setSecret] = useState({ id: '', value: '' });
-  const [secretError, setSecretError] = useState(false);
-  const [expiryRevision, setExpiryRevision] = useState(0);
-  const [secretRequestRevision, setSecretRequestRevision] = useState(0);
-  const canManageTokens = !!user && hasPermission('camera:view');
-  const { data: savedTokens = [], isPending: tokensPending, isError: tokensError, refetch } = useQuery({
-    queryKey: ['overlay-tokens', user?.id],
-    queryFn: api.listMyLongLivedCameraTokens,
-    enabled: canManageTokens,
-  });
-  const overlayTokens = savedTokens.filter((saved) => saved.scope === 'overlay');
-  const isExpired = (expires: string) => (parseUTCDate(expires)?.getTime() ?? 0) <= Date.now();
-  const selectedToken = overlayTokens.find((saved) => String(saved.id) === selectedTokenId);
-  const selectedTokenExpired = !!selectedToken && isExpired(selectedToken.expires_at);
-  useEffect(() => {
-    if (!selectedToken || selectedTokenExpired) return;
-    const remaining = (parseUTCDate(selectedToken.expires_at)?.getTime() ?? 0) - Date.now();
-    const timer = window.setTimeout(() => setExpiryRevision((revision) => revision + 1), Math.min(Math.max(remaining, 0), 86400000));
-    return () => window.clearTimeout(timer);
-  }, [selectedToken, selectedTokenExpired, expiryRevision]);
-  const savedToken = selectedToken?.can_reuse && !isExpired(selectedToken.expires_at) && secret.id === selectedTokenId
-    ? secret.value : '';
-  const token = selectedTokenId ? savedToken : manualToken;
-  const tokenUnavailable = selectedTokenId !== '' && !token;
-
-  useEffect(() => {
-    let cancelled = false;
-    setSecretError(false);
-    setSecret({ id: '', value: '' });
-    if (!canManageTokens || !selectedToken?.can_reuse || isExpired(selectedToken.expires_at)) return;
-    const id = String(selectedToken.id);
-    void api.retrieveOverlayToken(selectedToken.id).then((result) => {
-      if (!cancelled) setSecret({ id, value: result.token });
-    }).catch(() => {
-      if (!cancelled) setSecretError(true);
-    });
-    return () => { cancelled = true; };
-  }, [canManageTokens, selectedToken?.id, selectedToken?.can_reuse, selectedToken?.expires_at, selectedTokenExpired, secretRequestRevision]);
+  const token = manualToken;
+  const [importUrl, setImportUrl] = useState('');
+  const [importError, setImportError] = useState(false);
 
   const [printers, setPrinters] = useState<Printer[]>([]);
   const [printerId, setPrinterId] = useState<number | null>(null);
@@ -161,6 +124,45 @@ export function StreamOverlayBuilder({ onTokenCreated }: { onTokenCreated?: () =
     return masked.toString();
   };
 
+  const importExistingUrl = () => {
+    try {
+      const parsed = new URL(importUrl.trim());
+      const match = /^\/overlay\/([1-9]\d*)\/?$/.exec(parsed.pathname);
+      if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password || parsed.hash || !match) throw new Error();
+      const id = Number(match[1]);
+      if (!Number.isSafeInteger(id)) throw new Error();
+      const params = parsed.searchParams;
+      const supported = ['token', 'show', 'size', 'fps', 'artwork', 'camera'];
+      for (const key of params.keys()) {
+        if (!supported.includes(key) || params.getAll(key).length !== 1) throw new Error();
+      }
+      const importedFields = params.has('show') ? (params.get('show') ? params.get('show')!.split(',') : []) : DEFAULT_FIELDS;
+      if (importedFields.some((field) => !FIELDS.some((supportedField) => supportedField.key === field))) throw new Error();
+      const importedSize = params.get('size') ?? 'medium';
+      const importedFps = params.get('fps') ?? String(DEFAULT_FPS);
+      const importedArtwork = params.get('artwork') ?? '1';
+      const importedCamera = params.get('camera') ?? 'true';
+      if (!['small', 'medium', 'large'].includes(importedSize)
+        || !/^\d+$/.test(importedFps) || Number(importedFps) < 1 || Number(importedFps) > 30
+        || !['1', '2'].includes(importedArtwork) || !['true', 'false', '1', '0'].includes(importedCamera)) throw new Error();
+      // Validate everything before updating any state. Never open the imported origin.
+      setPrinterId(id);
+      setFields(importedFields);
+      setSize(importedSize as OverlaySize);
+      setFps(Number(importedFps));
+      setArtwork(importedArtwork as '1' | '2');
+      setShowCamera(!['false', '0'].includes(importedCamera));
+      tokenGeneration.current += 1;
+      setManualToken(params.get('token') ?? '');
+      setPreview(false);
+      setRevealToken(false);
+      setImportUrl('');
+      setImportError(false);
+    } catch {
+      setImportError(true);
+    }
+  };
+
   const toggleField = (key: string) => {
     setFields((prev) => (prev.includes(key) ? prev.filter((f) => f !== key) : [...prev, key]));
   };
@@ -200,20 +202,28 @@ export function StreamOverlayBuilder({ onTokenCreated }: { onTokenCreated?: () =
       </p>
 
       <div className="mb-4 space-y-2">
+        <label htmlFor="overlay-builder-import" className="block text-sm font-medium text-white">{t('streamOverlay.builder.importUrl')}</label>
+        <input id="overlay-builder-import" type="password" autoComplete="off" spellCheck={false} value={importUrl}
+          onChange={(event) => { setImportUrl(event.target.value); setImportError(false); }}
+          className="w-full min-w-0 px-3 py-2 bg-bambu-dark rounded-md text-white border border-bambu-dark-tertiary" />
+        <button type="button" disabled={!importUrl.trim()} onClick={importExistingUrl} className="px-3 py-2 bg-bambu-dark-tertiary text-white rounded-md disabled:opacity-50">{t('streamOverlay.builder.importAction')}</button>
+        <p className="text-xs text-bambu-gray">{t('streamOverlay.builder.importHint')}</p>
+        {importError && <p role="alert" className="text-sm text-red-400">{t('streamOverlay.builder.importError')}</p>}
+      </div>
+
+      <div className="mb-4 space-y-2">
         {user && hasPermission('camera:view') && (
-          <button type="button" onClick={() => setCreatingToken((current) => !current)} className="px-3 py-2 bg-bambu-dark-tertiary text-white rounded-md">
+          <button type="button" onClick={() => { tokenGeneration.current += 1; setCreatingToken((current) => !current); }} className="px-3 py-2 bg-bambu-dark-tertiary text-white rounded-md">
             {t(creatingToken ? 'common.cancel' : 'streamOverlay.builder.createToken')}
           </button>
         )}
         {creatingToken && user && hasPermission('camera:view') && <CreateTokenForm fixedScope="overlay" onCreated={(created) => {
-          if (!created.token) return;
+          onTokenCreated?.();
+          if (!created.token || tokenGeneration.current !== formGeneration) return;
           setPreview(false);
-          void queryClient.invalidateQueries({ queryKey: ['overlay-tokens'] });
-          setManualToken('');
-          setSelectedTokenId(String(created.id));
+          setManualToken(created.token);
           setRevealToken(false);
           setCreatingToken(false);
-          onTokenCreated?.();
         }} />}
       </div>
       <div className="grid grid-cols-1 gap-4 @min-[28rem]/overlay:grid-cols-2">
@@ -231,6 +241,7 @@ export function StreamOverlayBuilder({ onTokenCreated }: { onTokenCreated?: () =
             className="w-full px-3 py-2 bg-bambu-dark rounded-md text-white border border-bambu-dark-tertiary focus:border-bambu-green focus:outline-none"
           >
             {printers.length === 0 && <option value="">{t('common.loading', 'Loading…')}</option>}
+            {printerId !== null && !printers.some((printer) => printer.id === printerId) && <option value={printerId}>{printerId}</option>}
             {printers.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
@@ -329,35 +340,6 @@ export function StreamOverlayBuilder({ onTokenCreated }: { onTokenCreated?: () =
         </div>
 
         <div>
-          <label htmlFor="overlay-builder-token" className="block text-sm font-medium text-white mb-1">
-            {t('streamOverlay.builder.token', 'Streaming Overlay token (optional)')}
-          </label>
-          <select
-            id="overlay-builder-token"
-            value={selectedTokenId}
-            disabled={!canManageTokens || tokensPending}
-            onChange={(event) => {
-              setPreview(false);
-              setRevealToken(false);
-              setManualToken('');
-              setSelectedTokenId(event.target.value);
-            }}
-            className="w-full min-w-0 px-3 py-2 bg-bambu-dark rounded-md text-white border border-bambu-dark-tertiary"
-          >
-            <option value="">{t('streamOverlay.builder.noToken')}</option>
-            {overlayTokens.map((saved) => (
-              <option key={saved.id} value={saved.id} disabled={!saved.can_reuse || isExpired(saved.expires_at)}>
-                {saved.name}{isExpired(saved.expires_at) ? ` (${t('cameraTokens.list.expired')})` : !saved.can_reuse ? ` (${t('streamOverlay.builder.legacyToken')})` : ''}
-              </option>
-            ))}
-          </select>
-          {(tokensError || secretError) && <p role="alert" className="mt-2 text-sm text-red-400">{t('streamOverlay.builder.tokenLoadError')}</p>}
-          {(tokensError || secretError) && <button type="button" onClick={() => {
-            if (tokensError) void refetch();
-            if (secretError) setSecretRequestRevision((revision) => revision + 1);
-          }} className="text-sm text-bambu-gray">{t('common.retry')}</button>}
-          {selectedTokenExpired && <p role="alert" className="mt-2 text-sm text-red-400">{t('streamOverlay.builder.tokenExpired')}</p>}
-          {tokenUnavailable && !selectedTokenExpired && !secretError && selectedToken?.can_reuse && <p role="status" className="mt-2 text-sm text-bambu-gray">{t('common.loading')}</p>}
           <label htmlFor="overlay-builder-manual-token" className="block text-sm font-medium text-white mt-3 mb-1">
             {t('streamOverlay.builder.manualToken')}
           </label>
@@ -370,7 +352,7 @@ export function StreamOverlayBuilder({ onTokenCreated }: { onTokenCreated?: () =
             onChange={(event) => {
               setPreview(false);
               setRevealToken(false);
-              setSelectedTokenId('');
+              tokenGeneration.current += 1;
               setManualToken(event.target.value);
             }}
             placeholder="bblt_…"
@@ -381,8 +363,8 @@ export function StreamOverlayBuilder({ onTokenCreated }: { onTokenCreated?: () =
           </button>
           <p className="text-xs text-bambu-gray mt-1">
             {t(
-              'streamOverlay.builder.savedHint',
-              'Only needed when login is enabled: OBS has no session of its own. Create one above with the Streaming Overlay scope.',
+              'streamOverlay.builder.credentialHint',
+              'Create a token above, enter an existing token, or import an overlay URL. Copy the URL before leaving: tokens are held only in memory and cannot be recovered from their stored hash.',
             )}
           </p>
         </div>
@@ -467,7 +449,6 @@ export function StreamOverlayBuilder({ onTokenCreated }: { onTokenCreated?: () =
       <div className="mt-4">
         <button
           type="button"
-          disabled={tokenUnavailable}
           onClick={() => setPreview((p) => !p)}
           className="flex items-center gap-2 px-3 py-2 bg-bambu-dark-tertiary text-white rounded-md hover:bg-bambu-dark-tertiary/80 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
         >

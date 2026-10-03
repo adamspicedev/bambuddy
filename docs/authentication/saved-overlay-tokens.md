@@ -1,17 +1,13 @@
-# Saved streaming overlay tokens
+# Streaming overlay token creation and reuse
 
-Create an overlay token under Settings → API Keys, either in Camera API Tokens or directly in Streaming Overlay. The overlay token selector lists your tokens by name. Select one whenever you configure a browser source, including after reloading or on another device. Copy the resulting overlay URL into OBS. You do not need to keep a separate copy of the token.
+Create an overlay token under Settings → API Keys, either in Camera API Tokens or directly in Streaming Overlay. The builder uses the one-time creation response. Choose the printer and appearance, then copy the complete URL into OBS before leaving or reloading.
 
-Existing tokens created before this feature have only a hash. They keep working in existing browser sources, but cannot be retrieved by the selector. They are marked “Enter manually”. If you still have the token, paste it into **Manual token** to keep using it. Manual input and the displayed URL are masked by default; **Show token** reveals them, and Copy uses the full URL. The pasted token stays in component memory and clears when you leave or reload. If every copy is lost, explicitly create a replacement, update and verify your browser sources, then revoke the old token when it is no longer needed. Replacement never happens automatically.
+To reuse an existing credential, paste it into **Manual token**, or import its complete browser-source URL with **Existing overlay URL** and choose **Import URL**. Import parses the URL locally and never fetches it. Generated URLs use the current Bambuddy origin; check the printer when importing from another installation. Import supports printer, token, fields, text size, FPS, artwork and camera visibility. Unsupported or invalid options are rejected without changing the current settings; use manual token entry for URLs with other options. The input and displayed output are masked by default, while Copy uses the full usable URL. Credentials remain in component memory and are never saved in browser storage.
 
-## Storage and access
+## Storage and compatibility
 
-New tokens with the `overlay` scope retain an authenticated Fernet-encrypted copy in `long_lived_tokens.encrypted_token`. Every scope still uses its existing password hash for authentication. Camera-stream and Cam Wall tokens remain hash-only. Lists expose metadata and `can_reuse`, never ciphertext or plaintext.
+All scopes retain the existing hash-only token model. There is no saved-secret retrieval endpoint and no new encryption or backup-key policy. Existing tokens and browser-source URLs remain valid until expiry or explicit revocation. Nothing is rotated or revoked automatically.
 
-`POST /api/v1/auth/tokens/{id}/overlay-secret` requires an authenticated owner with `camera:view`. Administrators cannot retrieve another user's token. The endpoint rejects revoked, expired and non-overlay tokens, verifies the decrypted value against the authentication hash, and returns `Cache-Control: no-store`. Revoking a token removes its encrypted copy. The browser holds retrieved values only in component memory, masks them by default, and never writes them to browser storage or the query cache.
+Installations that tested an earlier draft may have an unused encrypted-token column. This revision does not delete existing data or keys. New tokens do not populate encrypted copies, and authentication continues to use existing token hashes. Existing backup and key guidance for other Bambuddy features remains unchanged.
 
-## Encryption key and backups
-
-This uses Bambuddy's existing encryption key resolver: `MFA_ENCRYPTION_KEY`, or the automatically generated `DATA_DIR/.mfa_encryption_key` file with owner-only permissions. The key is outside the database. Unlike legacy MFA helpers, overlay-token creation fails if encryption is unavailable; plaintext is never stored as a fallback.
-
-Preserve the existing key when migrating or restoring an installation. Full Bambuddy backups already include the file-based key and must therefore be protected as credentials themselves. An environment-provided key must be preserved separately. Losing or changing the key prevents retrieval of previously saved tokens; restoring the correct key restores retrieval. Existing browser-source URLs continue to authenticate against their hashes until expiry or revocation.
+If every copy of a credential has been lost, create a replacement, update and verify its browser sources, then revoke the old token when it is no longer needed. Treat complete source URLs as credentials.

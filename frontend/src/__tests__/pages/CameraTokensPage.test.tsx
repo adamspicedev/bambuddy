@@ -120,14 +120,12 @@ describe('CameraTokensPage', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('saves overlay tokens without asking users to copy a secret', async () => {
-    let created = false;
+  it('offers the overlay scope and shows a ready-made OBS overlay URL (#2613)', async () => {
     server.use(
-      http.get('*/api/v1/auth/tokens', () => HttpResponse.json(created ? [token({ id: 43, name: 'OBS', scope: 'overlay', can_reuse: true })] : [])),
+      http.get('*/api/v1/auth/tokens', () => HttpResponse.json([])),
       http.post('*/api/v1/auth/tokens', async ({ request }) => {
         const body = await request.json();
         expect(body).toMatchObject({ name: 'OBS', scope: 'overlay' });
-        created = true;
         return HttpResponse.json(
           token({
             id: 43,
@@ -148,9 +146,11 @@ describe('CameraTokensPage', () => {
     await user.selectOptions(screen.getByLabelText(/scope/i), 'overlay');
     await user.click(screen.getByRole('button', { name: /^create$/i }));
 
-    expect(await screen.findByText('OBS', { selector: 'td' })).toBeInTheDocument();
-    expect(screen.queryByText('bblt_abcd1234_secretsecretsecretsecretsecret')).not.toBeInTheDocument();
-    expect(screen.queryByText(/Token created — copy it now/)).not.toBeInTheDocument();
+    // The created modal hands over the assembled OBS overlay URL carrying the
+    // token, not just the raw token.
+    expect(await screen.findByText(/overlay url for obs/i)).toBeInTheDocument();
+    const url = screen.getByText(/\/overlay\/1\?token=/);
+    expect(url).toHaveTextContent('token=bblt_abcd1234_secretsecretsecretsecretsecret');
   });
 
   it('clamps the days input to the 365-day policy cap', async () => {

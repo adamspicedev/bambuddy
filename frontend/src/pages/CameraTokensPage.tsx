@@ -16,7 +16,6 @@
  * to-clipboard modal. Listings only ever show metadata.
  */
 import { useEffect, useMemo, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Copy, Plus, Trash2, AlertTriangle } from 'lucide-react';
 import { api, type LongLivedCameraToken, type LongLivedTokenScope } from '../api/client';
@@ -149,7 +148,7 @@ export function CreateTokenForm({ onCreated, fixedScope }: CreateTokenFormProps)
       </p>
       <p className="text-xs text-bambu-gray mt-1">
         {t(
-          scope === 'overlay' ? 'streamOverlay.builder.savedHint' : 'cameraTokens.create.hint',
+          'cameraTokens.create.hint',
           'Maximum lifetime is 365 days. The token value is shown only once on creation — copy it now.',
         )}
       </p>
@@ -272,7 +271,7 @@ function JustCreatedModal({ token, onClose }: JustCreatedModalProps) {
             </h2>
             <p className="text-sm text-bambu-gray mt-1">
               {t(
-                token.scope === 'overlay' ? 'streamOverlay.builder.savedHint' : 'cameraTokens.created.warning',
+                'cameraTokens.created.warning',
                 'This is the only time this token will be visible. After you close this dialog you can never view it again.',
               )}
             </p>
@@ -452,7 +451,6 @@ function TokenTable({ tokens, showOwner, userIdToName, onRevoke, emptyMessage }:
  * Settings → API Keys (the canonical home) or any other host card.
  */
 export function CameraTokensSection() {
-  const queryClient = useQueryClient();
   const { t } = useTranslation();
   const { user, isAdmin } = useAuth();
   const { showToast } = useToast();
@@ -512,7 +510,6 @@ export function CameraTokensSection() {
     setPendingRevoke(null);
     try {
       await api.revokeLongLivedCameraToken(id);
-      void queryClient.invalidateQueries({ queryKey: ['overlay-tokens'] });
       showToast(t('cameraTokens.toast.revoked', 'Token revoked'));
       await refresh();
     } catch (err) {
@@ -539,8 +536,7 @@ export function CameraTokensSection() {
 
       <CreateTokenForm
         onCreated={(token) => {
-          if (token.scope !== 'overlay') setJustCreated(token);
-          void queryClient.invalidateQueries({ queryKey: ['overlay-tokens'] });
+          setJustCreated(token);
           void refresh();
         }}
       />

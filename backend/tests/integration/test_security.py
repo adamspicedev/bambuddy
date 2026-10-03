@@ -1406,33 +1406,6 @@ class TestEncryptionStatusEndpoint:
         return login.json()["access_token"]
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("wrong_key", [False, True])
-    async def test_status_checks_saved_overlay_tokens(self, async_client, monkeypatch, wrong_key):
-        from cryptography.fernet import Fernet
-
-        import backend.app.core.encryption as enc_mod
-
-        token = await self._create_admin_and_login(async_client)
-        headers = {"Authorization": f"Bearer {token}"}
-        monkeypatch.setenv("MFA_ENCRYPTION_KEY", Fernet.generate_key().decode())
-        monkeypatch.setattr(enc_mod, "_fernet_instance", None)
-        created = await async_client.post(
-            "/api/v1/auth/tokens",
-            headers=headers,
-            json={"name": "Health check", "scope": "overlay", "expires_in_days": 90},
-        )
-        assert created.status_code == 201
-        if wrong_key:
-            monkeypatch.setenv("MFA_ENCRYPTION_KEY", Fernet.generate_key().decode())
-            enc_mod._fernet_instance = None
-        response = await async_client.get(self.STATUS_URL, headers=headers)
-        assert response.status_code == 200
-        data = response.json()
-        assert data["encrypted_rows"]["overlay_tokens"] == 1
-        assert data["legacy_plaintext_rows"]["overlay_tokens"] == 0
-        assert data["decryption_broken"] is wrong_key
-
-    @pytest.mark.asyncio
     @pytest.mark.integration
     async def test_status_reports_env_source(self, async_client, monkeypatch):
         from cryptography.fernet import Fernet

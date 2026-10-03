@@ -1707,7 +1707,8 @@ async def provision_ldap_user(
 
 def _long_lived_token_to_response(record, *, plaintext: str | None = None) -> dict:
     """Serialise a LongLivedToken row for the SPA. Plaintext is included
-    at creation only. Overlay secrets have a separate owner-only endpoint.
+    only at create time (and then never again), per the issue's "shown once"
+    contract.
     """
     return {
         "id": record.id,
@@ -1718,9 +1719,9 @@ def _long_lived_token_to_response(record, *, plaintext: str | None = None) -> di
         "created_at": record.created_at.isoformat() if record.created_at else None,
         "expires_at": record.expires_at.isoformat() if record.expires_at else None,
         "last_used_at": record.last_used_at.isoformat() if record.last_used_at else None,
-        # Listing endpoints never return plaintext or encrypted credentials.
+        # Plaintext is the ONLY field the user ever sees in full — copied once
+        # to a clipboard / kiosk config and then forgotten.
         "token": plaintext,
-        "can_reuse": record.scope == "overlay" and bool(record.encrypted_token),
     }
 
 
@@ -1735,9 +1736,10 @@ async def create_long_lived_camera_token(
 
     Body: ``{"name": str, "expires_in_days": int, "scope": "camera_stream"}``.
 
-    All scopes retain a password hash for authentication. Overlay tokens also
-    retain an encrypted copy for later owner-only retrieval; other scopes
-    return plaintext only at creation. Maximum lifetime is 365 days.
+    The plaintext token is returned **exactly once** in the response. The DB
+    only ever stores a pbkdf2 hash, so a leaked DB dump cannot replay the
+    token. Hard cap of 365 days; the issue's ``expire_in: 0`` (never) is
+    explicitly rejected.
     """
     from backend.app.services.long_lived_tokens import (
         ALLOWED_SCOPES,
@@ -1776,10 +1778,6 @@ async def create_long_lived_camera_token(
             expires_in_days=expires_in_days,
             scope=scope,
         )
-    except RuntimeError:
-        raise HTTPException(
-            status_code=503, detail="Overlay token encryption is unavailable. Check server encryption settings."
-        ) from None
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     _logger.info(
@@ -1791,50 +1789,6 @@ async def create_long_lived_camera_token(
     )
     response.headers["Cache-Control"] = "no-store"
     return _long_lived_token_to_response(created.record, plaintext=created.plaintext)
-
-
-@router.post("/tokens/{token_id}/overlay-secret")
-async def retrieve_overlay_token(
-    token_id: int,
-    response: Response,
-    current_user: User | None = RequirePermissionIfAuthEnabled(Permission.CAMERA_VIEW),
-    db: AsyncSession = Depends(get_db),
-):
-    """Retrieve an active overlay credential for its owner only, including admins."""
-    from backend.app.core.auth import verify_password
-    from backend.app.core.encryption import decrypt_secret_required
-    from backend.app.models.long_lived_token import LongLivedToken
-    from backend.app.services.long_lived_tokens import _is_expired
-
-    if current_user is None:
-        raise HTTPException(status_code=403, detail="Authentication is required")
-    record = (
-        await db.execute(
-            select(LongLivedToken).where(
-                LongLivedToken.id == token_id,
-                LongLivedToken.user_id == current_user.id,
-                LongLivedToken.scope == "overlay",
-                LongLivedToken.revoked_at.is_(None),
-            )
-        )
-    ).scalar_one_or_none()
-    if record is None or _is_expired(record, datetime.now(timezone.utc)):
-        raise HTTPException(status_code=404, detail="Active overlay token not found")
-    if not record.encrypted_token:
-        raise HTTPException(
-            status_code=409, detail="This legacy token cannot be retrieved. Create a new overlay token."
-        )
-    try:
-        plaintext = decrypt_secret_required(record.encrypted_token)
-        # Reject mismatched ciphertext, including accidentally swapped database rows.
-        if not verify_password(plaintext, record.secret_hash):
-            raise RuntimeError("Stored token mismatch")
-    except (RuntimeError, ValueError, UnicodeError):
-        raise HTTPException(
-            status_code=503, detail="Saved token is unavailable. Check server encryption settings."
-        ) from None
-    response.headers["Cache-Control"] = "no-store"
-    return {"token": plaintext}
 
 
 @router.get("/tokens", response_model=list[dict])
@@ -1945,7 +1899,7 @@ async def get_encryption_status(
     _: User | None = RequirePermissionIfAuthEnabled(Permission.SETTINGS_UPDATE),
     db: AsyncSession = Depends(get_db),
 ) -> EncryptionStatusResponse:
-    """Report at-rest encryption status for OIDC, TOTP and saved overlay secrets.
+    """Report at-rest encryption status for OIDC + TOTP secrets.
 
     Surfaces:
       (a) whether a key is configured and where it came from
@@ -1960,7 +1914,6 @@ async def get_encryption_status(
 
     from backend.app.core.database import get_migration_error_count
     from backend.app.core.encryption import get_key_source, is_encryption_active, mfa_decrypt
-    from backend.app.models.long_lived_token import LongLivedToken
     from backend.app.models.oidc_provider import OIDCProvider
     from backend.app.models.user_totp import UserTOTP
 
@@ -1982,9 +1935,6 @@ async def get_encryption_status(
             )
         )
         legacy_totp, encrypted_totp = totp_row.one()
-        encrypted_overlay = await db.scalar(
-            select(func.count()).select_from(LongLivedToken).where(LongLivedToken.encrypted_token.is_not(None))
-        )
     except SQLAlchemyError:
         _logger.exception("Failed to query encryption row counts")
         raise HTTPException(status_code=500, detail="Failed to retrieve encryption status")
@@ -1996,7 +1946,6 @@ async def get_encryption_status(
     encrypted_rows = EncryptionRowCounts(
         oidc_providers=int(encrypted_oidc or 0),
         user_totp=int(encrypted_totp or 0),
-        overlay_tokens=int(encrypted_overlay or 0),
     )
 
     # B4: detect "wrong key" state — sample-decrypt one encrypted row to
@@ -2006,7 +1955,7 @@ async def get_encryption_status(
     # (rotation, cross-deployment restore, env override) — status would show
     # green while every encrypted row was unrecoverable.
     decryption_broken = False
-    total_encrypted = encrypted_rows.oidc_providers + encrypted_rows.user_totp + encrypted_rows.overlay_tokens
+    total_encrypted = encrypted_rows.oidc_providers + encrypted_rows.user_totp
     if not key_configured and total_encrypted > 0:
         decryption_broken = True
     elif key_configured and total_encrypted > 0:
@@ -2033,18 +1982,6 @@ async def get_encryption_status(
                 mfa_decrypt(sample_value)
             except RuntimeError:
                 decryption_broken = True
-
-    if key_configured and encrypted_rows.overlay_tokens > 0:
-        from backend.app.core.encryption import decrypt_secret_required
-
-        try:
-            overlay_sample = await db.scalar(
-                select(LongLivedToken.encrypted_token).where(LongLivedToken.encrypted_token.is_not(None)).limit(1)
-            )
-            if overlay_sample is not None:
-                decrypt_secret_required(overlay_sample)
-        except (SQLAlchemyError, RuntimeError, ValueError, UnicodeError):
-            decryption_broken = True
 
     return EncryptionStatusResponse(
         key_configured=key_configured,

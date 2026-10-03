@@ -321,103 +321,90 @@ class TestCameraStreamTokenVerification:
         assert await verify_camera_stream_token("not-a-real-token") is False
 
 
-class TestSavedOverlayTokens:
-    async def test_owner_can_retrieve_encrypted_overlay_token(self, async_client, db_session, monkeypatch):
-        from backend.app.models.long_lived_token import LongLivedToken
+class TestHashOnlyOverlayTokens:
+    async def test_creation_is_hash_only_without_encryption(self, async_client, db_session, monkeypatch):
+        from sqlalchemy import text
 
-        jwt = await _setup_admin(async_client, suffix="_saved")
+        from backend.app.core import encryption
+        from backend.app.core.auth import verify_password
+        from backend.app.models.long_lived_token import LongLivedToken
+        from backend.app.services.long_lived_tokens import verify_token
+
+        jwt = await _setup_admin(async_client, suffix="_hash_only")
+        monkeypatch.setattr(encryption, "_get_fernet", lambda: None)
         headers = {"Authorization": f"Bearer {jwt}"}
         created = await async_client.post(
             "/api/v1/auth/tokens", headers=headers, json={"name": "OBS", "scope": "overlay", "expires_in_days": 30}
         )
         assert created.status_code == 201
+        assert created.headers["cache-control"] == "no-store"
         body = created.json()
         row = await db_session.get(LongLivedToken, body["id"])
-        assert row.encrypted_token.startswith("fernet:")
-        assert body["token"] not in row.encrypted_token
+        assert verify_password(body["token"], row.secret_hash)
+        assert await verify_token(db_session, body["token"], scope="overlay") is not None
+        columns = (await db_session.execute(text("PRAGMA table_info(long_lived_tokens)"))).all()
+        assert "encrypted_token" not in {column[1] for column in columns}
         listing = (await async_client.get("/api/v1/auth/tokens", headers=headers)).json()
         assert listing[0]["token"] is None
-        assert listing[0]["can_reuse"] is True
-        # Simulate a process restart: retrieval must load the persisted key.
-        from backend.app.core import encryption
+        assert "can_reuse" not in listing[0]
+        assert body["token"] not in str(listing)
 
-        monkeypatch.setattr(encryption, "_fernet_instance", None)
-        recovered = await async_client.post(f"/api/v1/auth/tokens/{body['id']}/overlay-secret", headers=headers)
-        assert recovered.status_code == 200
-        assert recovered.json()["token"] == body["token"]
-        assert recovered.headers["cache-control"] == "no-store"
-        await async_client.delete(f"/api/v1/auth/tokens/{body['id']}", headers=headers)
-        assert (
-            await async_client.post(f"/api/v1/auth/tokens/{body['id']}/overlay-secret", headers=headers)
-        ).status_code == 404
-        await db_session.refresh(row)
-        assert row.encrypted_token is None
+    async def test_recovery_endpoint_is_absent(self, async_client):
+        from backend.app.api.routes.auth import router
 
-    async def test_admin_cannot_retrieve_another_owners_token(self, async_client):
-        admin = await _setup_admin(async_client, suffix="_ownership")
-        await _create_user(async_client, admin, "overlay_owner")
-        owner = await _login(async_client, "overlay_owner")
-        created = await async_client.post(
-            "/api/v1/auth/tokens",
-            headers={"Authorization": f"Bearer {owner}"},
-            json={"name": "OBS", "scope": "overlay", "expires_in_days": 30},
-        )
-        response = await async_client.post(
-            f"/api/v1/auth/tokens/{created.json()['id']}/overlay-secret", headers={"Authorization": f"Bearer {admin}"}
-        )
-        assert response.status_code == 404
-
-    @pytest.mark.parametrize("kind", ["legacy", "expired", "wrong_scope", "wrong_key", "plaintext", "mismatched"])
-    async def test_unavailable_secret_is_never_returned(self, async_client, db_session, kind):
-        from datetime import datetime, timedelta, timezone
-
-        from backend.app.models.long_lived_token import LongLivedToken
-
-        jwt = await _setup_admin(async_client, suffix=f"_{kind}")
+        assert not any("overlay-secret" in route.path for route in router.routes)
+        jwt = await _setup_admin(async_client, suffix="_no_recovery")
         headers = {"Authorization": f"Bearer {jwt}"}
         created = await async_client.post(
             "/api/v1/auth/tokens", headers=headers, json={"name": "OBS", "scope": "overlay", "expires_in_days": 30}
         )
-        row = await db_session.get(LongLivedToken, created.json()["id"])
-        expected = 404
-        if kind == "legacy":
-            row.encrypted_token = None
-            expected = 409
-        elif kind == "expired":
-            row.expires_at = datetime.now(timezone.utc) - timedelta(days=1)
-        elif kind == "wrong_scope":
-            row.scope = "camwall"
-        elif kind == "plaintext":
-            row.encrypted_token = created.json()["token"]
-            expected = 503
-        elif kind == "mismatched":
-            from backend.app.core.encryption import encrypt_secret_required
-
-            row.encrypted_token = encrypt_secret_required("bblt_other_token")
-            expected = 503
-        else:
-            row.encrypted_token = "fernet:invalid"
-            expected = 503
-        await db_session.commit()
-        response = await async_client.post(f"/api/v1/auth/tokens/{row.id}/overlay-secret", headers=headers)
-        assert response.status_code == expected
+        response = await async_client.post(
+            f"/api/v1/auth/tokens/{created.json()['id']}/overlay-secret", headers=headers
+        )
+        # The SPA static fallback may answer 405 for an unknown POST.
+        assert response.status_code in (404, 405)
         assert created.json()["token"] not in response.text
 
-    async def test_creation_fails_closed_without_encryption(self, async_client, monkeypatch):
-        from backend.app.core import encryption
+    async def test_prior_encrypted_column_does_not_affect_hashes_or_get_rewritten(self, async_client, db_session):
+        from sqlalchemy import text
 
-        jwt = await _setup_admin(async_client, suffix="_nokey")
-        monkeypatch.setattr(encryption, "_get_fernet", lambda: None)
+        from backend.app.services.long_lived_tokens import verify_token
+
+        jwt = await _setup_admin(async_client, suffix="_compat")
         headers = {"Authorization": f"Bearer {jwt}"}
-        response = await async_client.post(
-            "/api/v1/auth/tokens", headers=headers, json={"name": "OBS", "scope": "overlay", "expires_in_days": 30}
+        created = await async_client.post(
+            "/api/v1/auth/tokens",
+            headers=headers,
+            json={"name": "Existing OBS", "scope": "overlay", "expires_in_days": 30},
         )
-        assert response.status_code == 503
-        assert (await async_client.get("/api/v1/auth/tokens", headers=headers)).json() == []
-
-    async def test_retrieval_requires_authentication(self, async_client):
-        response = await async_client.post("/api/v1/auth/tokens/1/overlay-secret")
-        assert response.status_code == 403
-        await _setup_admin(async_client, suffix="_requires_login")
-        response = await async_client.post("/api/v1/auth/tokens/1/overlay-secret")
-        assert response.status_code == 401
+        body = created.json()
+        # Simulate a database from the earlier PR build, without requiring its key.
+        columns = (await db_session.execute(text("PRAGMA table_info(long_lived_tokens)"))).all()
+        if "encrypted_token" not in {column[1] for column in columns}:
+            await db_session.execute(text("ALTER TABLE long_lived_tokens ADD COLUMN encrypted_token TEXT"))
+        await db_session.execute(
+            text("UPDATE long_lived_tokens SET encrypted_token = :ciphertext WHERE id = :id"),
+            {"ciphertext": "fernet:existing-ciphertext", "id": body["id"]},
+        )
+        await db_session.commit()
+        # Force an ORM reload rather than relying on its identity map.
+        db_session.expire_all()
+        assert await verify_token(db_session, body["token"], scope="overlay") is not None
+        new_token = await async_client.post(
+            "/api/v1/auth/tokens", headers=headers, json={"name": "New OBS", "scope": "overlay", "expires_in_days": 30}
+        )
+        assert new_token.status_code == 201
+        values = (
+            (await db_session.execute(text("SELECT encrypted_token FROM long_lived_tokens ORDER BY id")))
+            .scalars()
+            .all()
+        )
+        assert values == ["fernet:existing-ciphertext", None]
+        assert (await async_client.get("/api/v1/auth/tokens", headers=headers)).status_code == 200
+        assert (await async_client.delete(f"/api/v1/auth/tokens/{body['id']}", headers=headers)).status_code == 204
+        assert await verify_token(db_session, body["token"], scope="overlay") is None
+        # Explicit revocation changes validity, but does not silently delete old data.
+        value = await db_session.scalar(
+            text("SELECT encrypted_token FROM long_lived_tokens WHERE id = :id"), {"id": body["id"]}
+        )
+        assert value == "fernet:existing-ciphertext"

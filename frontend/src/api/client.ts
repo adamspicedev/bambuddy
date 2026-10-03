@@ -332,8 +332,8 @@ export interface SystemHealthResult {
 }
 
 // Long-lived camera tokens (#1108). The `token` field is populated only on the
-// create response. Listings never contain credentials; saved overlay tokens
-// use a separate owner-only retrieval endpoint.
+// create response — listing endpoints set it to null because the plaintext
+// value is shown to the user exactly once.
 //
 // 'camera_stream' reaches the video endpoints only. 'camwall' additionally
 // reaches the read-only Cam Wall feed, which names the printers (#2531), so it
@@ -346,7 +346,6 @@ export interface LongLivedCameraToken {
   name: string;
   scope: LongLivedTokenScope;
   lookup_prefix: string;
-  can_reuse?: boolean;
   created_at: string;
   expires_at: string;
   last_used_at: string | null;
@@ -4580,7 +4579,6 @@ export interface LDAPStatus {
 export interface EncryptionRowCounts {
   oidc_providers: number;
   user_totp: number;
-  overlay_tokens?: number;
 }
 
 export interface EncryptionStatus {
@@ -7180,9 +7178,6 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ scope: 'camera_stream', ...payload }),
     }),
-  retrieveOverlayToken: (id: number) =>
-    request<{ token: string }>(`/auth/tokens/${id}/overlay-secret`, { method: 'POST' }),
-
   listMyLongLivedCameraTokens: () =>
     request<LongLivedCameraToken[]>('/auth/tokens'),
   listAllLongLivedCameraTokens: () =>
