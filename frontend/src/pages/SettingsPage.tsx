@@ -4445,7 +4445,7 @@ export function SettingsPage() {
       {/* API Keys Tab */}
       {activeTab === 'apikeys' && (
         <div className={hasPermission('api_keys:read')
-          ? 'grid grid-cols-[repeat(auto-fit,minmax(min(100%,40rem),1fr))] gap-4'
+          ? 'grid grid-cols-1 lg:grid-cols-2 gap-4'
           : 'grid grid-cols-1 gap-4'}>
           {/* Left Column - API Keys Management. Admin-gated content
               (webhook keys, webhook docs) is hidden from users without

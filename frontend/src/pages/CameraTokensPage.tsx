@@ -40,9 +40,10 @@ function isExpired(iso: string): boolean {
 interface CreateTokenFormProps {
   onCreated: (token: LongLivedCameraToken) => void;
   fixedScope?: LongLivedTokenScope;
+  onSubmittingChange?: (submitting: boolean) => void;
 }
 
-export function CreateTokenForm({ onCreated, fixedScope }: CreateTokenFormProps) {
+export function CreateTokenForm({ onCreated, fixedScope, onSubmittingChange }: CreateTokenFormProps) {
   const { t } = useTranslation();
   const { showToast } = useToast();
   const [name, setName] = useState('');
@@ -52,8 +53,9 @@ export function CreateTokenForm({ onCreated, fixedScope }: CreateTokenFormProps)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || submitting) return;
     setSubmitting(true);
+    onSubmittingChange?.(true);
     try {
       const created = await api.createLongLivedCameraToken({
         name: name.trim(),
@@ -65,13 +67,14 @@ export function CreateTokenForm({ onCreated, fixedScope }: CreateTokenFormProps)
       setDays(DEFAULT_LIFETIME_DAYS);
       setScope(fixedScope ?? 'camera_stream');
       showToast(t('cameraTokens.toast.created', 'Token created'));
-    } catch {
+    } catch (err) {
       showToast(
-        t('cameraTokens.toast.createFailed', 'Failed to create token'),
+        err instanceof Error && err.message ? err.message : t('cameraTokens.toast.createFailed', 'Failed to create token'),
         'error',
       );
     } finally {
       setSubmitting(false);
+      onSubmittingChange?.(false);
     }
   };
 

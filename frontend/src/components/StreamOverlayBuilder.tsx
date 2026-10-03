@@ -6,14 +6,15 @@
  * issue asked for the field set to be selectable "through the web UI"; this is
  * that surface. Appearance is configured in the URL. Tokens entered, imported, or created
  * here remain in component memory; existing credentials cannot be recovered.
+ * The URL is the configuration so an OBS browser source needs no saved server-side profile.
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Copy, ExternalLink, Eye, EyeOff } from 'lucide-react';
 import { api, type Printer } from '../api/client';
 import { useToast } from '../contexts/ToastContext';
 import { OverlayBrandingControls } from './OverlayBrandingControls';
-import { DEFAULT_BRANDING } from '../utils/overlayBranding';
+import { DEFAULT_BRANDING, overlayGradient } from '../utils/overlayBranding';
 import { useAuth } from '../contexts/AuthContext';
 import { CreateTokenForm } from '../pages/CameraTokensPage';
 import { NumberInput } from './NumberInput';
@@ -48,8 +49,7 @@ export function StreamOverlayBuilder({ onTokenCreated }: { onTokenCreated?: () =
   const { showToast } = useToast();
   const { user, hasPermission } = useAuth();
   const [creatingToken, setCreatingToken] = useState(false);
-  const tokenGeneration = useRef(0);
-  const formGeneration = tokenGeneration.current;
+  const [submittingToken, setSubmittingToken] = useState(false);
   const [revealToken, setRevealToken] = useState(false);
   const [manualToken, setManualToken] = useState('');
   const token = manualToken;
@@ -68,6 +68,8 @@ export function StreamOverlayBuilder({ onTokenCreated }: { onTokenCreated?: () =
   const [showCamera, setShowCamera] = useState(true);
   const [branding, setBranding] = useState(DEFAULT_BRANDING);
   const [layout, setLayout] = useState<OverlayLayout | 'both'>('landscape');
+  const [brandingImportRevision, setBrandingImportRevision] = useState(0);
+  const [brandingBusy, setBrandingBusy] = useState(false);
   const [preview, setPreview] = useState(false);
 
   useEffect(() => {
@@ -120,7 +122,7 @@ export function StreamOverlayBuilder({ onTokenCreated }: { onTokenCreated?: () =
 
   const displayedUrl = (url: string) => {
     const masked = new URL(url);
-    if (masked.searchParams.has('token') && !revealToken) masked.searchParams.set('token', '••••••••');
+    if (masked.searchParams.has('token') && !revealToken) masked.searchParams.set('token', '****');
     return masked.toString();
   };
 
@@ -132,27 +134,34 @@ export function StreamOverlayBuilder({ onTokenCreated }: { onTokenCreated?: () =
       const id = Number(match[1]);
       if (!Number.isSafeInteger(id)) throw new Error();
       const params = parsed.searchParams;
-      const supported = ['token', 'show', 'size', 'fps', 'artwork', 'camera'];
-      for (const key of params.keys()) {
-        if (!supported.includes(key) || params.getAll(key).length !== 1) throw new Error();
-      }
-      const importedFields = params.has('show') ? (params.get('show') ? params.get('show')!.split(',') : []) : DEFAULT_FIELDS;
-      if (importedFields.some((field) => !FIELDS.some((supportedField) => supportedField.key === field))) throw new Error();
-      const importedSize = params.get('size') ?? 'medium';
-      const importedFps = params.get('fps') ?? String(DEFAULT_FPS);
-      const importedArtwork = params.get('artwork') ?? '1';
-      const importedCamera = params.get('camera') ?? 'true';
-      if (!['small', 'medium', 'large'].includes(importedSize)
-        || !/^\d+$/.test(importedFps) || Number(importedFps) < 1 || Number(importedFps) > 30
-        || !['1', '2'].includes(importedArtwork) || !['true', 'false', '1', '0'].includes(importedCamera)) throw new Error();
+      if (params.getAll('token').length > 1) throw new Error();
+      const importedFields = params.has('show') ? params.get('show')!.split(',').filter(
+        (field) => FIELDS.some((supportedField) => supportedField.key === field),
+      ) : DEFAULT_FIELDS;
+      const sizeParam = params.get('size');
+      const importedSize = sizeParam === 'small' || sizeParam === 'large' ? sizeParam : 'medium';
+      const fpsParam = parseInt(params.get('fps') || '15', 10);
+      const importedFps = Math.min(Math.max(Number.isNaN(fpsParam) ? DEFAULT_FPS : fpsParam, 1), 30);
+      const transparencyParam = Number(params.get('backgroundTransparency'));
+      const importedTransparency = Number.isFinite(transparencyParam)
+        ? Math.min(100, Math.max(0, transparencyParam)) : 0;
+      const from = params.get('progressFrom');
+      const to = params.get('progressTo');
+      const validGradient = overlayGradient(from, to);
       // Validate everything before updating any state. Never open the imported origin.
       setPrinterId(id);
+      setLayout(params.get('layout') === 'portrait' ? 'portrait' : 'landscape');
       setFields(importedFields);
       setSize(importedSize as OverlaySize);
-      setFps(Number(importedFps));
-      setArtwork(importedArtwork as '1' | '2');
-      setShowCamera(!['false', '0'].includes(importedCamera));
-      tokenGeneration.current += 1;
+      setFps(importedFps);
+      setArtwork(params.get('artwork') === '2' ? '2' : '1');
+      setShowCamera(!['false', '0'].includes(params.get('camera') ?? ''));
+      setBackgroundTransparency(importedTransparency);
+      setBranding((current) => ({
+        ...current, logo: params.get('logo') === '1',
+        from: validGradient ? from! : '', to: validGradient ? to! : '',
+      }));
+      setBrandingImportRevision((revision) => revision + 1);
       setManualToken(params.get('token') ?? '');
       setPreview(false);
       setRevealToken(false);
@@ -203,23 +212,23 @@ export function StreamOverlayBuilder({ onTokenCreated }: { onTokenCreated?: () =
 
       <div className="mb-4 space-y-2">
         <label htmlFor="overlay-builder-import" className="block text-sm font-medium text-white">{t('streamOverlay.builder.importUrl')}</label>
-        <input id="overlay-builder-import" type="password" autoComplete="off" spellCheck={false} value={importUrl}
+        <input id="overlay-builder-import" type="password" autoComplete="off" spellCheck={false} value={importUrl} disabled={submittingToken || brandingBusy}
           onChange={(event) => { setImportUrl(event.target.value); setImportError(false); }}
           className="w-full min-w-0 px-3 py-2 bg-bambu-dark rounded-md text-white border border-bambu-dark-tertiary" />
-        <button type="button" disabled={!importUrl.trim()} onClick={importExistingUrl} className="px-3 py-2 bg-bambu-dark-tertiary text-white rounded-md disabled:opacity-50">{t('streamOverlay.builder.importAction')}</button>
+        <button type="button" disabled={submittingToken || brandingBusy || !importUrl.trim()} onClick={importExistingUrl} className="px-3 py-2 bg-bambu-dark-tertiary text-white rounded-md disabled:opacity-50">{t('streamOverlay.builder.importAction')}</button>
         <p className="text-xs text-bambu-gray">{t('streamOverlay.builder.importHint')}</p>
         {importError && <p role="alert" className="text-sm text-red-400">{t('streamOverlay.builder.importError')}</p>}
       </div>
 
       <div className="mb-4 space-y-2">
         {user && hasPermission('camera:view') && (
-          <button type="button" onClick={() => { tokenGeneration.current += 1; setCreatingToken((current) => !current); }} className="px-3 py-2 bg-bambu-dark-tertiary text-white rounded-md">
+          <button type="button" disabled={submittingToken} onClick={() => setCreatingToken((current) => !current)} className="px-3 py-2 bg-bambu-dark-tertiary text-white rounded-md">
             {t(creatingToken ? 'common.cancel' : 'streamOverlay.builder.createToken')}
           </button>
         )}
-        {creatingToken && user && hasPermission('camera:view') && <CreateTokenForm fixedScope="overlay" onCreated={(created) => {
+        {creatingToken && user && hasPermission('camera:view') && <CreateTokenForm fixedScope="overlay" onSubmittingChange={setSubmittingToken} onCreated={(created) => {
           onTokenCreated?.();
-          if (!created.token || tokenGeneration.current !== formGeneration) return;
+          if (!created.token) return;
           setPreview(false);
           setManualToken(created.token);
           setRevealToken(false);
@@ -347,12 +356,12 @@ export function StreamOverlayBuilder({ onTokenCreated }: { onTokenCreated?: () =
             id="overlay-builder-manual-token"
             type={revealToken ? 'text' : 'password'}
             value={manualToken}
+            disabled={submittingToken}
             autoComplete="off"
             spellCheck={false}
             onChange={(event) => {
               setPreview(false);
               setRevealToken(false);
-              tokenGeneration.current += 1;
               setManualToken(event.target.value);
             }}
             placeholder="bblt_…"
@@ -404,7 +413,7 @@ export function StreamOverlayBuilder({ onTokenCreated }: { onTokenCreated?: () =
         </p>
       </fieldset>
 
-      <OverlayBrandingControls value={branding} onChange={setBranding} />
+      <OverlayBrandingControls key={brandingImportRevision} value={branding} onChange={setBranding} onBusyChange={setBrandingBusy} />
 
       <div className="mt-4">
         {outputs.map(({ layout: orientation, url }) => (
@@ -450,7 +459,7 @@ export function StreamOverlayBuilder({ onTokenCreated }: { onTokenCreated?: () =
         <button
           type="button"
           onClick={() => setPreview((p) => !p)}
-          className="flex items-center gap-2 px-3 py-2 bg-bambu-dark-tertiary text-white rounded-md hover:bg-bambu-dark-tertiary/80 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-2 px-3 py-2 bg-bambu-dark-tertiary text-white rounded-md hover:bg-bambu-dark-tertiary/80 text-sm"
         >
           {preview ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           {preview

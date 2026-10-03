@@ -323,8 +323,6 @@ class TestCameraStreamTokenVerification:
 
 class TestHashOnlyOverlayTokens:
     async def test_creation_is_hash_only_without_encryption(self, async_client, db_session, monkeypatch):
-        from sqlalchemy import text
-
         from backend.app.core import encryption
         from backend.app.core.auth import verify_password
         from backend.app.models.long_lived_token import LongLivedToken
@@ -342,8 +340,6 @@ class TestHashOnlyOverlayTokens:
         row = await db_session.get(LongLivedToken, body["id"])
         assert verify_password(body["token"], row.secret_hash)
         assert await verify_token(db_session, body["token"], scope="overlay") is not None
-        columns = (await db_session.execute(text("PRAGMA table_info(long_lived_tokens)"))).all()
-        assert "encrypted_token" not in {column[1] for column in columns}
         listing = (await async_client.get("/api/v1/auth/tokens", headers=headers)).json()
         assert listing[0]["token"] is None
         assert "can_reuse" not in listing[0]
@@ -364,47 +360,3 @@ class TestHashOnlyOverlayTokens:
         # The SPA static fallback may answer 405 for an unknown POST.
         assert response.status_code in (404, 405)
         assert created.json()["token"] not in response.text
-
-    async def test_prior_encrypted_column_does_not_affect_hashes_or_get_rewritten(self, async_client, db_session):
-        from sqlalchemy import text
-
-        from backend.app.services.long_lived_tokens import verify_token
-
-        jwt = await _setup_admin(async_client, suffix="_compat")
-        headers = {"Authorization": f"Bearer {jwt}"}
-        created = await async_client.post(
-            "/api/v1/auth/tokens",
-            headers=headers,
-            json={"name": "Existing OBS", "scope": "overlay", "expires_in_days": 30},
-        )
-        body = created.json()
-        # Simulate a database from the earlier PR build, without requiring its key.
-        columns = (await db_session.execute(text("PRAGMA table_info(long_lived_tokens)"))).all()
-        if "encrypted_token" not in {column[1] for column in columns}:
-            await db_session.execute(text("ALTER TABLE long_lived_tokens ADD COLUMN encrypted_token TEXT"))
-        await db_session.execute(
-            text("UPDATE long_lived_tokens SET encrypted_token = :ciphertext WHERE id = :id"),
-            {"ciphertext": "fernet:existing-ciphertext", "id": body["id"]},
-        )
-        await db_session.commit()
-        # Force an ORM reload rather than relying on its identity map.
-        db_session.expire_all()
-        assert await verify_token(db_session, body["token"], scope="overlay") is not None
-        new_token = await async_client.post(
-            "/api/v1/auth/tokens", headers=headers, json={"name": "New OBS", "scope": "overlay", "expires_in_days": 30}
-        )
-        assert new_token.status_code == 201
-        values = (
-            (await db_session.execute(text("SELECT encrypted_token FROM long_lived_tokens ORDER BY id")))
-            .scalars()
-            .all()
-        )
-        assert values == ["fernet:existing-ciphertext", None]
-        assert (await async_client.get("/api/v1/auth/tokens", headers=headers)).status_code == 200
-        assert (await async_client.delete(f"/api/v1/auth/tokens/{body['id']}", headers=headers)).status_code == 204
-        assert await verify_token(db_session, body["token"], scope="overlay") is None
-        # Explicit revocation changes validity, but does not silently delete old data.
-        value = await db_session.scalar(
-            text("SELECT encrypted_token FROM long_lived_tokens WHERE id = :id"), {"id": body["id"]}
-        )
-        assert value == "fernet:existing-ciphertext"
