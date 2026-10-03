@@ -42,7 +42,7 @@ export function OverlayBrandingControls({ value, onChange }: {
     <p className="text-xs text-bambu-gray">{t('streamOverlay.branding.hint')}</p>
     <label className="block text-sm text-bambu-gray">
       {t('streamOverlay.branding.upload')}
-      <input type="file" accept="image/png,image/webp" disabled={busy || !canEdit}
+      <input type="file" accept="image/png,image/webp" disabled={!canEdit}
         className="mt-1 block w-full text-sm"
         onChange={(event) => {
           const file = event.target.files?.[0];
@@ -53,10 +53,10 @@ export function OverlayBrandingControls({ value, onChange }: {
     {logo && <div className="flex flex-wrap items-center gap-3">
       <img src={logo} alt={t('streamOverlay.branding.logo')} className="h-16 max-w-40 object-contain" />
       <label className="flex items-center gap-2 text-sm text-bambu-gray">
-        <input type="checkbox" checked={value.logo} disabled={busy} onChange={(event) => onChange({ ...value, logo: event.target.checked })} />
+        <input type="checkbox" checked={value.logo} onChange={(event) => onChange({ ...value, logo: event.target.checked })} />
         {t('streamOverlay.branding.logo')}
       </label>
-      <button type="button" disabled={busy || !canEdit} onClick={() => void saveLogo(null)} className="text-sm text-red-400 disabled:opacity-50">{t('common.remove')}</button>
+      <button type="button" disabled={!canEdit} onClick={() => void saveLogo(null)} className="text-sm text-red-400 disabled:opacity-50">{t('common.remove')}</button>
     </div>}
     <div className="grid gap-3 sm:grid-cols-2">
       {(['from', 'to'] as const).map((key) => <div key={key}>

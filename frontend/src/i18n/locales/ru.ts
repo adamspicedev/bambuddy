@@ -3435,7 +3435,6 @@ export default {
       reset: "Сбросить цвета",
       failed: "Не удалось сохранить логотип. Проверьте формат и размер изображения.",
     },
-
     title: "Оформление трансляции",
     invalidPrinterId: "Неверный идентификатор принтера",
     cameraStream: "Видеопоток камеры",
@@ -3448,7 +3447,6 @@ export default {
     builder: {
       backgroundTransparency: "Прозрачность фона",
       backgroundTransparencyHint: "Изменяет только тёмный фон. Текст, логотипы и изображение камеры остаются видимыми.",
-
       artwork: 'Оформление',
       artworkClassic: 'Классическое',
       artworkV2: 'Версия 2',

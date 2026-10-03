@@ -3641,16 +3641,15 @@ export default {
   // Stream overlay
   streamOverlay: {
     branding: {
-      title: "Branding",
-      hint: "One shared logo for this installation. PNG or WebP, up to 2 MiB and 4 million pixels. Replacing or removing it affects overlays using it.",
-      upload: "Upload logo",
-      logo: "Custom logo",
-      from: "From colour",
-      to: "To colour",
-      reset: "Reset colours",
-      failed: "Could not save the logo. Check the image format and size.",
+      title: 'Branding',
+      hint: 'One shared logo for this installation. PNG or WebP, up to 2 MiB and 4 million pixels. Replacing or removing it affects overlays using it.',
+      upload: 'Upload logo',
+      logo: 'Custom logo',
+      from: 'From colour',
+      to: 'To colour',
+      reset: 'Reset colours',
+      failed: 'Could not save the logo. Check the image format and size.',
     },
-
     title: 'Stream Overlay',
     invalidPrinterId: 'Invalid printer ID',
     cameraStream: 'Camera stream',
@@ -3661,9 +3660,8 @@ export default {
     layer: 'Layer',
     remaining: 'Remaining',
     builder: {
-      backgroundTransparency: "Background transparency",
-      backgroundTransparencyHint: "Fade the dark backgrounds only. Text, logos and camera stay visible.",
-
+      backgroundTransparency: 'Background transparency',
+      backgroundTransparencyHint: 'Fade the dark backgrounds only. Text, logos and camera stay visible.',
       artwork: 'Artwork',
       artworkClassic: 'Classic',
       artworkV2: 'Version 2',

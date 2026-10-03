@@ -3647,7 +3647,6 @@ export default {
       reset: "Скинути кольори",
       failed: "Не вдалося зберегти логотип. Перевірте формат і розмір зображення.",
     },
-
     title: "Накладання потоку",
     invalidPrinterId: "Недійсний ідентифікатор принтера",
     cameraStream: "Потік камери",
@@ -3660,7 +3659,6 @@ export default {
     builder: {
       backgroundTransparency: "Прозорість тла",
       backgroundTransparencyHint: "Змінює лише темне тло. Текст, логотипи та зображення камери залишаються видимими.",
-
       artwork: 'Оформлення',
       artworkClassic: 'Класичне',
       artworkV2: 'Версія 2',

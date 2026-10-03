@@ -35,16 +35,18 @@ async def test_logo_upload_read_remove(async_client, tmp_path, monkeypatch):
 
 
 @pytest.mark.parametrize(
-    "content", [b"<svg></svg>", b"invalid", b"x" * (2 * 1024 * 1024 + 1)], ids=["svg", "invalid", "oversized"]
+    ("content", "status"),
+    [(b"<svg></svg>", 400), (b"invalid", 400), (b"x" * (2 * 1024 * 1024 + 1), 413)],
+    ids=["svg", "invalid", "oversized"],
 )
-async def test_rejects_invalid_uploads(async_client, tmp_path, monkeypatch, content):
+async def test_rejects_invalid_uploads(async_client, tmp_path, monkeypatch, content, status):
     from backend.app.core.config import settings
 
     monkeypatch.setattr(settings, "base_dir", tmp_path)
     response = await async_client.post(
         "/api/v1/settings/overlay-logo", files={"file": ("logo.png", content, "image/png")}
     )
-    assert response.status_code in (400, 413)
+    assert response.status_code == status
     assert not (tmp_path / "overlay-branding" / "logo.png").exists()
 
 

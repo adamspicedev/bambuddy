@@ -3640,16 +3640,15 @@ errors: {
   // Stream overlay
   streamOverlay: {
     branding: {
-      title: "Profilering",
-      hint: "En delad logotyp för denna installation. PNG eller WebP, högst 2 MiB och 4 miljoner pixlar. Byte eller borttagning påverkar överlägg som använder den.",
-      upload: "Ladda upp logotyp",
-      logo: "Egen logotyp",
-      from: "Startfärg",
-      to: "Slutfärg",
-      reset: "Återställ färger",
-      failed: "Kunde inte spara logotypen. Kontrollera bildformat och storlek.",
+      title: 'Profilering',
+      hint: 'En delad logotyp för denna installation. PNG eller WebP, högst 2 MiB och 4 miljoner pixlar. Byte eller borttagning påverkar överlägg som använder den.',
+      upload: 'Ladda upp logotyp',
+      logo: 'Egen logotyp',
+      from: 'Startfärg',
+      to: 'Slutfärg',
+      reset: 'Återställ färger',
+      failed: 'Kunde inte spara logotypen. Kontrollera bildformat och storlek.',
     },
-
     title: 'Strömöverlägg',
     invalidPrinterId: 'Ogiltigt skrivar-ID',
     cameraStream: 'Kameraström',
@@ -3660,9 +3659,8 @@ errors: {
     layer: 'Lager',
     remaining: 'Återstående',
     builder: {
-      backgroundTransparency: "Bakgrundens genomskinlighet",
-      backgroundTransparencyHint: "Tona bara ned de mörka bakgrunderna. Text, logotyper och kamerabild förblir synliga.",
-
+      backgroundTransparency: 'Bakgrundens genomskinlighet',
+      backgroundTransparencyHint: 'Tona bara ned de mörka bakgrunderna. Text, logotyper och kamerabild förblir synliga.',
       artwork: 'Utseende',
       artworkClassic: 'Klassisk',
       artworkV2: 'Version 2',
