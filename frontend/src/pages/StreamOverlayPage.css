@@ -13,30 +13,24 @@
 .classic-overlay[data-layout='portrait'][data-size='large'] {
   --classic-scale: 1.2;
 }
-.classic-overlay[data-layout='portrait'] .text-sm,
-.classic-overlay[data-layout='portrait'] .text-base,
-.classic-overlay[data-layout='portrait'] .text-xl {
+.classic-overlay[data-layout='portrait'] .classic-overlay__text {
   font-size: calc(30px * var(--classic-scale));
   line-height: 1.4;
 }
-.classic-overlay[data-layout='portrait'] .text-lg,
-.classic-overlay[data-layout='portrait'] .text-3xl,
-.classic-overlay[data-layout='portrait'] .font-semibold {
+.classic-overlay[data-layout='portrait'] .classic-overlay__filename {
   font-size: calc(42px * var(--classic-scale));
   line-height: 1.2;
-}
-.classic-overlay[data-layout='portrait'] .font-semibold {
   white-space: normal;
   overflow-wrap: anywhere;
 }
-.classic-overlay[data-layout='portrait'] .bottom-0 > div {
+.classic-overlay[data-layout='portrait'] .classic-overlay__panel {
   padding: 32px;
 }
-.classic-overlay[data-layout='portrait'] svg {
+.classic-overlay[data-layout='portrait'] .classic-overlay__icon {
   width: 30px;
   height: 30px;
   flex-shrink: 0;
 }
-.classic-overlay[data-layout='portrait'] a > img {
+.classic-overlay[data-layout='portrait'] .classic-overlay__logo {
   height: 120px;
 }

@@ -199,7 +199,7 @@
 .updated-overlay[data-layout='portrait'] .updated-overlay__header {
   grid-row: 1;
   align-items: center;
-  background: #10171b;
+  background: rgb(16 23 27 / var(--overlay-background-alpha, 1));
 }
 .updated-overlay[data-layout='portrait'] .updated-overlay__identity {
   background: none;
@@ -213,7 +213,7 @@
 }
 .updated-overlay[data-layout='portrait'] .updated-overlay__panel {
   grid-row: 3;
-  background: #10171b;
+  background: rgb(16 23 27 / var(--overlay-background-alpha, 1));
 }
 .updated-overlay[data-layout='portrait'] .updated-overlay__summary {
   flex-direction: column-reverse;
@@ -235,55 +235,6 @@
 .updated-overlay[data-layout='portrait'] .updated-overlay__temperatures:not(:first-child) {
   border-top: 1px solid #ffffff35;
   padding-top: 0.8em;
-}
-@media (orientation: portrait) {
-  .updated-overlay:not([data-layout]) {
-    display: grid;
-    font-size: calc(clamp(14px, calc(3 * var(--overlay-vmin, 1vmin)), 36px) * var(--overlay-scale));
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto 1fr auto;
-    min-height: var(--overlay-height, 100vh);
-  }
-  .updated-overlay:not([data-layout]) .updated-overlay__header {
-    grid-row: 1;
-    align-items: center;
-    background: rgb(16 23 27 / var(--overlay-background-alpha, 1));
-  }
-  .updated-overlay:not([data-layout]) .updated-overlay__identity {
-    background: none;
-    padding: 0;
-  }
-  .updated-overlay:not([data-layout]) .updated-overlay__camera {
-    position: relative;
-    grid-row: 2;
-    min-height: calc(var(--overlay-height, 100vh) * 0.3);
-    z-index: 0;
-  }
-  .updated-overlay:not([data-layout]) .updated-overlay__panel {
-    grid-row: 3;
-    background: rgb(16 23 27 / var(--overlay-background-alpha, 1));
-  }
-  .updated-overlay:not([data-layout]) .updated-overlay__summary {
-    flex-direction: column-reverse;
-    align-items: stretch;
-    gap: 0.65em;
-  }
-  .updated-overlay:not([data-layout]) .updated-overlay__progress {
-    flex-wrap: wrap;
-    justify-content: space-between;
-    gap: 0.3em;
-  }
-  .updated-overlay:not([data-layout]) .updated-overlay__progress > div {
-    flex: 0 0 100%;
-    order: 1;
-  }
-  .updated-overlay:not([data-layout]) .updated-overlay__readings {
-    flex-direction: column;
-  }
-  .updated-overlay:not([data-layout]) .updated-overlay__temperatures:not(:first-child) {
-    border-top: 1px solid #ffffff35;
-    padding-top: 0.8em;
-  }
 }
 @media (prefers-reduced-motion: reduce) {
   .updated-overlay__progress > div > div {

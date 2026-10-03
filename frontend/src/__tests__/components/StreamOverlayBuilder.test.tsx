@@ -40,6 +40,9 @@ describe('StreamOverlayBuilder', () => {
     const layout = screen.getByLabelText('Layout');
     expect(layout).toHaveValue('landscape');
     await user.selectOptions(layout, 'both');
+    fireEvent.change(screen.getByLabelText('From colour (hex)'), { target: { value: '#ff0000' } });
+    fireEvent.change(screen.getByLabelText('To colour (hex)'), { target: { value: '#0000ff' } });
+    if (artwork === '2') fireEvent.change(screen.getByRole('slider', { name: /Background transparency/ }), { target: { value: '65' } });
     expect(document.querySelectorAll('iframe')).toHaveLength(0);
     await user.selectOptions(screen.getByLabelText('Printer'), '2');
     await user.type(screen.getByLabelText(/token/i), 'bblt_example');
@@ -51,7 +54,10 @@ describe('StreamOverlayBuilder', () => {
       const group = within(screen.getByRole('group', { name: `${orientation} URL` }));
       const url = new URL(group.getByRole('link', { name: 'Open' }).getAttribute('href') ?? '');
       expect(url.pathname).toBe('/overlay/2');
-      expect(url.searchParams.get('layout')).toBe(orientation.toLowerCase());
+      expect(url.searchParams.get('progressFrom')).toBe('#ff0000');
+      expect(url.searchParams.get('progressTo')).toBe('#0000ff');
+      expect(url.searchParams.get('backgroundTransparency')).toBe(artwork === '2' ? '65' : null);
+      expect(url.searchParams.get('layout')).toBe(orientation === 'Portrait' ? 'portrait' : null);
       expect(url.searchParams.get('token')).toBe('bblt_example');
       expect(url.searchParams.get('size')).toBe('large');
       expect(url.searchParams.get('camera')).toBe('false');
@@ -66,12 +72,14 @@ describe('StreamOverlayBuilder', () => {
     const fps = screen.getByLabelText('Frame rate');
     await user.clear(fps);
     await user.type(fps, '5');
-    for (const iframe of document.querySelectorAll('iframe')) {
-      const params = new URL(iframe.src).searchParams;
-      expect(params.get('camera')).toBeNull();
-      expect(params.get('size')).toBe('small');
-      expect(params.get('fps')).toBe('5');
-    }
+    await waitFor(() => {
+      for (const iframe of document.querySelectorAll('iframe')) {
+        const params = new URL(iframe.src).searchParams;
+        expect(params.get('camera')).toBeNull();
+        expect(params.get('size')).toBe('small');
+        expect(params.get('fps')).toBe('5');
+      }
+    });
     await user.selectOptions(layout, 'portrait');
     expect(document.querySelectorAll('iframe')).toHaveLength(1);
     expect(screen.queryByTitle('Landscape preview')).not.toBeInTheDocument();
@@ -96,6 +104,7 @@ describe('StreamOverlayBuilder', () => {
     // ?show= is read with includes(), so order is free to be the stable one.
     expect(shownUrl()).toContain('show=filename%2Cstatus%2Cprogress%2Clayers%2Ceta');
     // Defaults are omitted rather than spelled out — a shorter URL to paste.
+    expect(shownUrl()).not.toContain('layout=');
     expect(shownUrl()).not.toContain('size=');
     expect(shownUrl()).not.toContain('fps=');
     expect(shownUrl()).not.toContain('camera=');

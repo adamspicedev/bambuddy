@@ -103,7 +103,8 @@ export function StreamOverlayBuilder() {
     if (token.trim()) params.set('token', token.trim());
     const layouts: OverlayLayout[] = layout === 'both' ? ['landscape', 'portrait'] : [layout];
     return layouts.map((orientation) => {
-      params.set('layout', orientation);
+      if (orientation === 'portrait') params.set('layout', orientation);
+      else params.delete('layout');
       return { layout: orientation, url: `${window.location.origin}/overlay/${id}?${params.toString()}` };
     });
   }, [printerId, fields, size, fps, showCamera, token, artwork, layout, branding, backgroundTransparency]);

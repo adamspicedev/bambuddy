@@ -35,7 +35,7 @@ export function OverlayFrame({ layout, preview = false, children }: {
     transformOrigin: 'center',
   };
   return (
-    <div ref={ref} className={preview ? 'relative w-full overflow-hidden bg-black' : 'fixed inset-0 overflow-hidden bg-black'}
+    <div ref={ref} className={preview ? 'relative w-full overflow-hidden' : 'fixed inset-0 overflow-hidden'}
       style={preview ? { aspectRatio: `${width} / ${height}` } : undefined}>
       <div style={canvasStyle}>{children}</div>
     </div>
