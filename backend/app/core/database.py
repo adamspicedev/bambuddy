@@ -43,12 +43,40 @@ def _resolve_pool_kwargs() -> dict:
         farms while printer callbacks held connections. The 80-connection
         ceiling fits a stock server (max_connections 100, 3 reserved for
         superusers); 20 + 80 did not, and tripped the startup pool check.
-      - SQLite: pool_size 20 + max_overflow 200 (unchanged); no pre-ping /
-        recycle — the connection is a local file, not a server socket.
+      - SQLite: pool_size 10 + max_overflow 90 (lowered from 20 + 200, #2883 —
+        see the comment below); no pre-ping / recycle — the connection is a
+        local file, not a server socket.
     """
     if is_sqlite():
-        pool_size = settings.db_pool_size if settings.db_pool_size is not None else 20
-        max_overflow = settings.db_max_overflow if settings.db_max_overflow is not None else 200
+        # SQLite + WAL parks one main-db file descriptor per *closed* overflow
+        # connection: as long as any pooled connection stays open (it always
+        # does), SQLite's unix VFS moves the fd of every closing connection to
+        # its per-inode "unused fd" list instead of close(2)-ing it, to avoid
+        # the POSIX close-drops-advisory-locks trap. Those fds are reused by
+        # later connections but only released when the LAST connection to the
+        # file closes, which in a running server is effectively never. So the
+        # pool's database fds stay at the PEAK concurrency it ever reached.
+        #
+        # An open connection holds two fds (db and -wal; the -shm fd is shared
+        # per file), a parked one holds one. At the old 20 + 200 that is up to
+        # ~441 fds with every connection open and ~221 parked once they close.
+        # That alone does not reach Docker's default 1024 soft nofile; in
+        # #2883 other descriptors made up the rest. But it is the largest
+        # single share, and once the process hits EMFILE every new connection
+        # fails with "disk I/O error" (the WAL/shm open in the connect-time
+        # PRAGMAs), which in #2883 ran for 44h and ended in "database disk
+        # image is malformed". 10 + 90 halves the pool's share (~201 / ~101).
+        # The startup RLIMIT_NOFILE raise in main.py is the other half of the
+        # fix: it lifts the 1024 ceiling itself on every install.
+        #
+        # 20 + 200 came in with b8fa2df36 (March 2026) for QueuePool exhaustion
+        # on a 100+ printer SQLite farm, before PostgreSQL was supported. Since
+        # then #2572 made an authenticated request use one checkout instead of
+        # several, which is why 10 + 90 should cover a farm that size. A large
+        # SQLite farm that still exhausts the pool can raise DB_MAX_OVERFLOW,
+        # but is better served by moving to PostgreSQL.
+        pool_size = settings.db_pool_size if settings.db_pool_size is not None else 10
+        max_overflow = settings.db_max_overflow if settings.db_max_overflow is not None else 90
         kwargs = {"pool_size": pool_size, "max_overflow": max_overflow}
     else:
         pool_size = settings.db_pool_size if settings.db_pool_size is not None else 20
@@ -321,6 +349,7 @@ async def init_db():
         print_queue,
         printer,
         printer_ha_sensor,
+        printer_location,
         printer_sensor_history,
         project,
         project_bom,
@@ -5156,6 +5185,9 @@ async def run_migrations(conn):
     # Spoolman and the location sync then imported as storage locations.
     await _migrate_drop_ams_slot_locations(conn)
 
+    # Data migration: printer locations as the locations API stores them (#2962).
+    await _migrate_normalize_printer_locations(conn)
+
     # Migration: link a batch to the external record that asked for it (a shop
     # order an integration turned into prints). The unique index is what makes
     # a retried create safe; both columns are new, so no row can violate it.
@@ -5501,6 +5533,31 @@ async def _migrate_location_ha_sensor_unique_binding(conn) -> None:
         "CREATE UNIQUE INDEX IF NOT EXISTS uq_location_ha_sensors_location_entity "
         "ON location_ha_sensors (location_id, entity_id)",
     )
+
+
+async def _migrate_normalize_printer_locations(conn) -> None:
+    """Trim printer locations and store a blank one as NULL (#2962).
+
+    Nothing trimmed ``printers.location`` before, so "Workshop " and "Workshop"
+    could both be stored, and "" sat next to NULL for "no location". The
+    Printer Locations API trims every name it is given, so an untrimmed stored
+    value could never be matched to rename or delete it. Queue items'
+    ``target_location`` is trimmed the same way, so model-based jobs keep
+    matching their printers exactly. Idempotent: only rows that change are
+    touched.
+    """
+    from sqlalchemy import text
+
+    async with conn.begin_nested():
+        for table, column in (("printers", "location"), ("print_queue", "target_location")):
+            await conn.execute(
+                text(f"UPDATE {table} SET {column} = NULL WHERE {column} IS NOT NULL AND TRIM({column}) = ''")  # noqa: S608  # nosec B608 — fixed identifiers
+            )
+            await conn.execute(
+                text(
+                    f"UPDATE {table} SET {column} = TRIM({column}) WHERE {column} IS NOT NULL AND {column} <> TRIM({column})"
+                )  # noqa: S608  # nosec B608 — fixed identifiers
+            )
 
 
 async def _migrate_drop_ams_slot_locations(conn) -> None:
