@@ -3647,9 +3647,10 @@ export default {
       hideToken: "Token ausblenden",
       copyUrl: "Overlay-URL kopieren",
 
-      savedHint: "Overlay-Tokens werden sicher in Bambuddy gespeichert und können hier wieder ausgewählt werden. Ältere Tokens mit „Ersatz erstellen“ lassen sich nicht wiederherstellen; erstelle einmalig ein neues Token. Die Anmeldung muss aktiviert sein.",
+      manualToken: 'Token manuell eingeben',
+      savedHint: "Wähle ein gespeichertes Token oder füge unten ein vorhandenes Token ein. Mit „Manuell eingeben“ markierte Tokens können nicht aus ihrem gespeicherten Hash wiederhergestellt werden. Für gespeicherte Tokens muss die Anmeldung aktiviert sein.",
       noToken: "Kein Token",
-      legacyToken: "Ersatz erstellen",
+      legacyToken: "Manuell eingeben",
       tokenExpired: "Dieses Token ist abgelaufen. Wähle ein anderes Token oder erstelle einen Ersatz.",
       tokenLoadError: "Das gespeicherte Token konnte nicht geladen werden. Wähle es erneut aus oder lade die Seite neu.",
       title: 'Stream-Overlay',

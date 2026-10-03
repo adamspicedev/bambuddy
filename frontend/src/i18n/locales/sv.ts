@@ -3676,9 +3676,10 @@ errors: {
       hideToken: "Dölj token",
       copyUrl: "Kopiera overlay-URL",
 
-      savedHint: "Overlay-token sparas säkert i Bambuddy. Välj en här när du behöver den. Äldre token märkta «Skapa ersättare» kan inte återställas; skapa en ny token en gång. Inloggning måste vara aktiverad.",
+      manualToken: 'Manuell token',
+      savedHint: "Välj en sparad token eller klistra in en befintlig token nedan. Token märkta «Ange manuellt» kan inte återskapas från sin lagrade hash. Inloggning måste vara aktiverad för att använda sparade token.",
       noToken: "Ingen token",
-      legacyToken: "Skapa ersättare",
+      legacyToken: "Ange manuellt",
       tokenExpired: "Denna token har gått ut. Välj en annan token eller skapa en ny.",
       tokenLoadError: "Den sparade token kunde inte hämtas. Välj den igen eller ladda om sidan.",
       title: 'Strömningsöverlägg',

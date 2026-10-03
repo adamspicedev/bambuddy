@@ -3634,9 +3634,10 @@ export default {
       hideToken: "隱藏權杖",
       copyUrl: "複製疊加層 URL",
 
-      savedHint: "疊加層權杖會安全地儲存在 Bambuddy 中，需要時可在此選擇。標有「建立替代權杖」的舊權杖無法復原，只需建立一次新權杖。必須啟用登入才能使用儲存的權杖。",
+      manualToken: '手動輸入權杖',
+      savedHint: "選擇已儲存的權杖，或在下方貼上現有權杖。標記為「手動輸入」的權杖無法從已儲存的雜湊還原。使用已儲存的權杖需要啟用登入。",
       noToken: "不使用權杖",
-      legacyToken: "建立替代權杖",
+      legacyToken: "手動輸入",
       tokenExpired: "此權杖已過期。請選擇其他權杖或建立新權杖。",
       tokenLoadError: "無法載入儲存的權杖。請重新選擇或重新載入頁面。",
       title: '直播疊加層',

@@ -3634,9 +3634,10 @@ export default {
       hideToken: "Nascondi token",
       copyUrl: "Copia URL overlay",
 
-      savedHint: "I token overlay vengono salvati in modo sicuro in Bambuddy. Selezionali qui quando servono. I vecchi token contrassegnati con «Crea sostituto» non sono recuperabili; crea un nuovo token una sola volta. L’accesso deve essere abilitato.",
+      manualToken: 'Token manuale',
+      savedHint: "Seleziona un token salvato o incolla un token esistente qui sotto. I token contrassegnati con «Inserisci manualmente» non possono essere recuperati dal loro hash memorizzato. Per usare i token salvati deve essere abilitato l’accesso.",
       noToken: "Nessun token",
-      legacyToken: "Crea sostituto",
+      legacyToken: "Inserisci manualmente",
       tokenExpired: "Questo token è scaduto. Seleziona un altro token o creane uno nuovo.",
       tokenLoadError: "Impossibile caricare il token salvato. Selezionalo di nuovo o ricarica la pagina.",
       title: 'Overlay per streaming',

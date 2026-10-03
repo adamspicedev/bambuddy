@@ -12,7 +12,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { render } from '../utils';
 import { server } from '../mocks/server';
-import { setAuthToken } from '../../api/client';
+import { api, setAuthToken } from '../../api/client';
 import { StreamOverlayBuilder } from '../../components/StreamOverlayBuilder';
 
 const printers = [
@@ -111,6 +111,53 @@ describe('StreamOverlayBuilder', () => {
     expect(document.querySelectorAll('iframe')).toHaveLength(0);
     copy.mockRestore();
     vi.unstubAllGlobals();
+  });
+
+  it('accepts an existing raw token without requiring saved-token recovery', async () => {
+    const user = userEvent.setup();
+    const view = render(<StreamOverlayBuilder />);
+    await screen.findByRole('option', { name: 'P1S' });
+    const manual = screen.getByLabelText('Manual token');
+    expect(manual).toHaveAttribute('type', 'password');
+    await user.type(manual, 'bblt_existing');
+    expect(shownUrl()).not.toContain('bblt_existing');
+    await user.click(screen.getByRole('button', { name: 'Show preview' }));
+    expect(new URL(screen.getByTitle('Overlay preview').getAttribute('src')!).searchParams.get('token')).toBe('bblt_existing');
+    await user.click(screen.getByRole('button', { name: 'Show token' }));
+    expect(manual).toHaveAttribute('type', 'text');
+    expect(shownUrl()).toContain('token=bblt_existing');
+    view.unmount();
+    render(<StreamOverlayBuilder />);
+    expect(screen.getByLabelText('Manual token')).toHaveValue('');
+    expect(shownUrl()).not.toContain('bblt_existing');
+  });
+
+  it('ignores an old saved-token response after manual entry and reselection', async () => {
+    setupSavedTokens();
+    let finishOld: (value: { token: string }) => void = () => {};
+    let finishNew: (value: { token: string }) => void = () => {};
+    const oldRequest = new Promise<{ token: string }>((resolve) => { finishOld = resolve; });
+    const newRequest = new Promise<{ token: string }>((resolve) => { finishNew = resolve; });
+    const retrieve = vi.spyOn(api, 'retrieveOverlayToken')
+      .mockReturnValueOnce(oldRequest).mockReturnValueOnce(newRequest);
+    const user = userEvent.setup();
+    render(<StreamOverlayBuilder />);
+    await screen.findByRole('option', { name: 'OBS', exact: true });
+    const selector = screen.getByLabelText('Streaming Overlay token (optional)');
+    await user.selectOptions(selector, '42');
+    await waitFor(() => expect(retrieve).toHaveBeenCalledTimes(1));
+    await user.type(screen.getByLabelText('Manual token'), 'bblt_manual');
+    expect(screen.getByRole('button', { name: 'Copy overlay URL' })).toBeEnabled();
+    await user.selectOptions(selector, '42');
+    await waitFor(() => expect(retrieve).toHaveBeenCalledTimes(2));
+    expect(screen.getByLabelText('Manual token')).toHaveValue('');
+    await act(async () => { finishOld({ token: 'bblt_stale' }); await oldRequest; });
+    expect(screen.getByRole('button', { name: 'Copy overlay URL' })).toBeDisabled();
+    expect(shownUrl()).not.toContain('token=');
+    await act(async () => { finishNew({ token: 'bblt_fresh' }); await newRequest; });
+    await user.click(screen.getByRole('button', { name: 'Show token' }));
+    expect(shownUrl()).toContain('token=bblt_fresh');
+    expect(shownUrl()).not.toContain('bblt_stale');
   });
 
   it('shows an expired selection instead of loading and stops the preview', async () => {

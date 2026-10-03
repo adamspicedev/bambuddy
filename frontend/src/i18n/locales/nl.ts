@@ -3677,9 +3677,10 @@ export default {
       hideToken: "Token verbergen",
       copyUrl: "Overlay-URL kopiëren",
 
-      savedHint: "Overlay-tokens worden veilig in Bambuddy opgeslagen. Selecteer ze hier wanneer je ze nodig hebt. Oude tokens met «Vervanging maken» kunnen niet worden hersteld; maak eenmalig een nieuw token. Aanmelden moet ingeschakeld zijn.",
+      manualToken: 'Handmatig token',
+      savedHint: "Selecteer een opgeslagen token of plak hieronder een bestaand token. Tokens met «Handmatig invoeren» kunnen niet uit hun opgeslagen hash worden hersteld. Aanmelden moet ingeschakeld zijn om opgeslagen tokens te gebruiken.",
       noToken: "Geen token",
-      legacyToken: "Vervanging maken",
+      legacyToken: "Handmatig invoeren",
       tokenExpired: "Dit token is verlopen. Selecteer een ander token of maak een nieuw token.",
       tokenLoadError: "Het opgeslagen token kon niet worden geladen. Selecteer het opnieuw of herlaad de pagina.",
       title: 'Streamingoverlay',

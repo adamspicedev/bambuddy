@@ -2,7 +2,7 @@
 
 Create an overlay token under Settings → API Keys, either in Camera API Tokens or directly in Streaming Overlay. The overlay token selector lists your tokens by name. Select one whenever you configure a browser source, including after reloading or on another device. Copy the resulting overlay URL into OBS. You do not need to keep a separate copy of the token.
 
-Existing tokens created before this feature have only a hash. They keep working in existing browser sources, but cannot be retrieved by the selector. They are marked “Create a replacement”. Create a new token once, update and verify your browser sources, then revoke the old token when it is no longer needed. Replacement never happens automatically.
+Existing tokens created before this feature have only a hash. They keep working in existing browser sources, but cannot be retrieved by the selector. They are marked “Enter manually”. If you still have the token, paste it into **Manual token** to keep using it. Manual input and the displayed URL are masked by default; **Show token** reveals them, and Copy uses the full URL. The pasted token stays in component memory and clears when you leave or reload. If every copy is lost, explicitly create a replacement, update and verify your browser sources, then revoke the old token when it is no longer needed. Replacement never happens automatically.
 
 ## Storage and access
 

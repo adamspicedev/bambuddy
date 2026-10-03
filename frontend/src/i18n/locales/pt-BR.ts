@@ -3634,9 +3634,10 @@ export default {
       hideToken: "Ocultar token",
       copyUrl: "Copiar URL de sobreposição",
 
-      savedHint: "Os tokens de sobreposição são salvos com segurança no Bambuddy. Selecione um aqui quando precisar. Tokens antigos marcados com «Criar substituto» não podem ser recuperados; crie um novo token uma única vez. O login deve estar ativado.",
+      manualToken: 'Token manual',
+      savedHint: "Selecione um token salvo ou cole um token existente abaixo. Tokens marcados como «Inserir manualmente» não podem ser recuperados do hash armazenado. O login deve estar ativado para usar tokens salvos.",
       noToken: "Sem token",
-      legacyToken: "Criar substituto",
+      legacyToken: "Inserir manualmente",
       tokenExpired: "Este token expirou. Selecione outro token ou crie um novo.",
       tokenLoadError: "Não foi possível carregar o token salvo. Selecione-o novamente ou recarregue a página.",
       title: 'Sobreposição de transmissão',

@@ -3634,9 +3634,10 @@ export default {
       hideToken: "隐藏令牌",
       copyUrl: "复制叠加层 URL",
 
-      savedHint: "叠加层令牌会安全地保存在 Bambuddy 中，需要时可在此选择。标有“创建替代令牌”的旧令牌无法恢复，只需创建一次新令牌。必须启用登录才能使用保存的令牌。",
+      manualToken: '手动输入令牌',
+      savedHint: "选择已保存的令牌，或在下方粘贴现有令牌。标记为“手动输入”的令牌无法从已存储的哈希恢复。使用已保存的令牌需要启用登录。",
       noToken: "不使用令牌",
-      legacyToken: "创建替代令牌",
+      legacyToken: "手动输入",
       tokenExpired: "此令牌已过期。请选择其他令牌或创建新令牌。",
       tokenLoadError: "无法加载保存的令牌。请重新选择或刷新页面。",
       title: '直播叠加层',

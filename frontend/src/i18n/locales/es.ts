@@ -3649,9 +3649,10 @@ export default {
       hideToken: "Ocultar token",
       copyUrl: "Copiar URL de superposición",
 
-      savedHint: "Los tokens de superposición se guardan de forma segura en Bambuddy y puedes seleccionarlos aquí cuando los necesites. Los antiguos marcados «Crear reemplazo» no se pueden recuperar; crea uno nuevo una vez. El inicio de sesión debe estar habilitado.",
+      manualToken: 'Token manual',
+      savedHint: "Selecciona un token guardado o pega uno existente abajo. Los tokens marcados «Introducir manualmente» no se pueden recuperar de su hash almacenado. El inicio de sesión debe estar activado para usar tokens guardados.",
       noToken: "Sin token",
-      legacyToken: "Crear reemplazo",
+      legacyToken: "Introducir manualmente",
       tokenExpired: "Este token ha caducado. Selecciona otro token o crea uno nuevo.",
       tokenLoadError: "No se pudo cargar el token guardado. Selecciónalo de nuevo o recarga la página.",
       title: 'Superposición de emisión',

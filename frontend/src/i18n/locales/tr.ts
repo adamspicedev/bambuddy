@@ -3649,9 +3649,10 @@ export default {
       hideToken: "Belirteci gizle",
       copyUrl: "Kaplama URL’sini kopyala",
 
-      savedHint: "Kaplama belirteçleri Bambuddy’de güvenle saklanır. Gerektiğinde buradan seçebilirsiniz. «Yenisini oluştur» işaretli eski belirteçler kurtarılamaz; bir kez yeni belirteç oluşturun. Oturum açma etkin olmalıdır.",
+      manualToken: 'Manuel belirteç',
+      savedHint: "Kayıtlı bir belirteç seçin veya mevcut bir belirteci aşağıya yapıştırın. «Elle girin» işaretli belirteçler saklanan özetten kurtarılamaz. Kayıtlı belirteçleri kullanmak için oturum açma etkin olmalıdır.",
       noToken: "Belirteç yok",
-      legacyToken: "Yenisini oluştur",
+      legacyToken: "Elle girin",
       tokenExpired: "Bu belirtecin süresi doldu. Başka bir belirteç seçin veya yenisini oluşturun.",
       tokenLoadError: "Kaydedilen belirteç yüklenemedi. Yeniden seçin veya sayfayı yenileyin.",
       title: 'Yayın Kaplaması',

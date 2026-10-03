@@ -3635,9 +3635,10 @@ export default {
       hideToken: "Masquer le jeton",
       copyUrl: "Copier l’URL de superposition",
 
-      savedHint: "Les jetons de superposition sont enregistrés en toute sécurité dans Bambuddy. Sélectionnez-en un ici selon vos besoins. Les anciens jetons marqués « Créer un remplaçant » ne sont pas récupérables ; créez un nouveau jeton une seule fois. La connexion doit être activée.",
+      manualToken: 'Jeton manuel',
+      savedHint: "Sélectionnez un jeton enregistré ou collez un jeton existant ci-dessous. Les jetons marqués « Saisir manuellement » ne peuvent pas être récupérés depuis leur empreinte stockée. La connexion doit être activée pour utiliser les jetons enregistrés.",
       noToken: "Aucun jeton",
-      legacyToken: "Créer un remplaçant",
+      legacyToken: "Saisir manuellement",
       tokenExpired: "Ce jeton a expiré. Sélectionnez un autre jeton ou créez-en un nouveau.",
       tokenLoadError: "Impossible de charger le jeton enregistré. Sélectionnez-le à nouveau ou rechargez la page.",
       title: 'Incrustation de diffusion',

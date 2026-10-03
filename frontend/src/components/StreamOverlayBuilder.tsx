@@ -53,6 +53,7 @@ export function StreamOverlayBuilder({ onTokenCreated }: { onTokenCreated?: () =
   const [revealToken, setRevealToken] = useState(false);
   const queryClient = useQueryClient();
   const [selectedTokenId, setSelectedTokenId] = useState('');
+  const [manualToken, setManualToken] = useState('');
   const [secret, setSecret] = useState({ id: '', value: '' });
   const [secretError, setSecretError] = useState(false);
   const [expiryRevision, setExpiryRevision] = useState(0);
@@ -73,8 +74,9 @@ export function StreamOverlayBuilder({ onTokenCreated }: { onTokenCreated?: () =
     const timer = window.setTimeout(() => setExpiryRevision((revision) => revision + 1), Math.min(Math.max(remaining, 0), 86400000));
     return () => window.clearTimeout(timer);
   }, [selectedToken, selectedTokenExpired, expiryRevision]);
-  const token = selectedToken?.can_reuse && !isExpired(selectedToken.expires_at) && secret.id === selectedTokenId
+  const savedToken = selectedToken?.can_reuse && !isExpired(selectedToken.expires_at) && secret.id === selectedTokenId
     ? secret.value : '';
+  const token = selectedTokenId ? savedToken : manualToken;
   const tokenUnavailable = selectedTokenId !== '' && !token;
 
   useEffect(() => {
@@ -207,6 +209,7 @@ export function StreamOverlayBuilder({ onTokenCreated }: { onTokenCreated?: () =
           if (!created.token) return;
           setPreview(false);
           void queryClient.invalidateQueries({ queryKey: ['overlay-tokens'] });
+          setManualToken('');
           setSelectedTokenId(String(created.id));
           setRevealToken(false);
           setCreatingToken(false);
@@ -336,6 +339,7 @@ export function StreamOverlayBuilder({ onTokenCreated }: { onTokenCreated?: () =
             onChange={(event) => {
               setPreview(false);
               setRevealToken(false);
+              setManualToken('');
               setSelectedTokenId(event.target.value);
             }}
             className="w-full min-w-0 px-3 py-2 bg-bambu-dark rounded-md text-white border border-bambu-dark-tertiary"
@@ -354,6 +358,24 @@ export function StreamOverlayBuilder({ onTokenCreated }: { onTokenCreated?: () =
           }} className="text-sm text-bambu-gray">{t('common.retry')}</button>}
           {selectedTokenExpired && <p role="alert" className="mt-2 text-sm text-red-400">{t('streamOverlay.builder.tokenExpired')}</p>}
           {tokenUnavailable && !selectedTokenExpired && !secretError && selectedToken?.can_reuse && <p role="status" className="mt-2 text-sm text-bambu-gray">{t('common.loading')}</p>}
+          <label htmlFor="overlay-builder-manual-token" className="block text-sm font-medium text-white mt-3 mb-1">
+            {t('streamOverlay.builder.manualToken')}
+          </label>
+          <input
+            id="overlay-builder-manual-token"
+            type={revealToken ? 'text' : 'password'}
+            value={manualToken}
+            autoComplete="off"
+            spellCheck={false}
+            onChange={(event) => {
+              setPreview(false);
+              setRevealToken(false);
+              setSelectedTokenId('');
+              setManualToken(event.target.value);
+            }}
+            placeholder="bblt_…"
+            className="w-full min-w-0 px-3 py-2 bg-bambu-dark rounded-md text-white border border-bambu-dark-tertiary"
+          />
           <button type="button" disabled={!token} onClick={() => setRevealToken((current) => !current)} className="mt-2 text-sm text-bambu-gray disabled:opacity-50">
             {t(revealToken ? 'streamOverlay.builder.hideToken' : 'streamOverlay.builder.showToken')}
           </button>
