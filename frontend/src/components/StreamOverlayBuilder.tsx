@@ -130,7 +130,7 @@ export function StreamOverlayBuilder({ onTokenCreated }: { onTokenCreated?: () =
     try {
       const parsed = new URL(importUrl.trim());
       const match = /^\/overlay\/([1-9]\d*)\/?$/.exec(parsed.pathname);
-      if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password || parsed.hash || !match) throw new Error();
+      if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password || !match) throw new Error();
       const id = Number(match[1]);
       if (!Number.isSafeInteger(id)) throw new Error();
       const params = parsed.searchParams;
@@ -212,7 +212,7 @@ export function StreamOverlayBuilder({ onTokenCreated }: { onTokenCreated?: () =
 
       <div className="mb-4 space-y-2">
         <label htmlFor="overlay-builder-import" className="block text-sm font-medium text-white">{t('streamOverlay.builder.importUrl')}</label>
-        <input id="overlay-builder-import" type="password" autoComplete="off" spellCheck={false} value={importUrl} disabled={submittingToken || brandingBusy}
+        <input id="overlay-builder-import" type="password" autoComplete="new-password" spellCheck={false} value={importUrl} disabled={submittingToken || brandingBusy}
           onChange={(event) => { setImportUrl(event.target.value); setImportError(false); }}
           className="w-full min-w-0 px-3 py-2 bg-bambu-dark rounded-md text-white border border-bambu-dark-tertiary" />
         <button type="button" disabled={submittingToken || brandingBusy || !importUrl.trim()} onClick={importExistingUrl} className="px-3 py-2 bg-bambu-dark-tertiary text-white rounded-md disabled:opacity-50">{t('streamOverlay.builder.importAction')}</button>
@@ -357,7 +357,7 @@ export function StreamOverlayBuilder({ onTokenCreated }: { onTokenCreated?: () =
             type={revealToken ? 'text' : 'password'}
             value={manualToken}
             disabled={submittingToken}
-            autoComplete="off"
+            autoComplete="new-password"
             spellCheck={false}
             onChange={(event) => {
               setPreview(false);
@@ -425,7 +425,7 @@ export function StreamOverlayBuilder({ onTokenCreated }: { onTokenCreated?: () =
               {t('streamOverlay.builder.sourceDimensions', OVERLAY_DIMENSIONS[orientation])}
             </p>
             <div className="flex flex-wrap items-center gap-2">
-              <code className="w-full px-3 py-2 bg-bambu-dark rounded-md text-bambu-green text-xs break-all font-mono select-all">
+              <code className="w-full px-3 py-2 bg-bambu-dark rounded-md text-bambu-green text-xs break-all font-mono">
                 {displayedUrl(url)}
               </code>
               <button type="button" onClick={() => void copyUrl(url)}

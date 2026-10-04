@@ -151,6 +151,10 @@ describe('StreamOverlayBuilder', () => {
     await screen.findByRole('option', { name: 'P1S' });
     const input = screen.getByLabelText('Existing overlay URL');
     expect(input).toHaveAttribute('type', 'password');
+    // Chrome ignores autocomplete="off" on password fields and could fill the
+    // login password in; new-password keeps both secret fields unfilled.
+    expect(input).toHaveAttribute('autocomplete', 'new-password');
+    expect(screen.getByLabelText('Manual token')).toHaveAttribute('autocomplete', 'new-password');
     await user.type(input, 'https://other.example/overlay/2?token=bblt_imported&show=nozzle,status&size=large&fps=5&artwork=2&camera=false');
     await user.click(screen.getByRole('button', { name: 'Import URL' }));
     expect(input).toHaveValue('');
@@ -207,6 +211,19 @@ describe('StreamOverlayBuilder', () => {
     expect(url.searchParams.get('show')).toBe('status');
     expect(screen.getByLabelText('Text size')).toHaveValue('medium');
     expect(url.searchParams.has('unrelated')).toBe(false);
+  });
+
+  it('ignores a fragment, as the overlay page does', async () => {
+    const user = userEvent.setup();
+    render(<StreamOverlayBuilder />);
+    await screen.findByRole('option', { name: 'P1S' });
+    fireEvent.change(screen.getByLabelText('Existing overlay URL'), { target: { value:
+      'https://other.example/overlay/2?token=bblt_fragment&size=large#scene' } });
+    await user.click(screen.getByRole('button', { name: 'Import URL' }));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Manual token')).toHaveValue('bblt_fragment');
+    expect(screen.getByLabelText('Text size')).toHaveValue('large');
+    expect(new URL(shownUrl()).hash).toBe('');
   });
 
   it('imports branding and transparency and resets missing values on the next import', async () => {
